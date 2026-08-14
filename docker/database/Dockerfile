@@ -4,11 +4,11 @@
 ARG DEBIAN_FRONTEND=noninteractive
 ARG CMANGOS_EXPANSION=classic
 ARG CMANGOS_CORE_REPOSITORY_URL=https://github.com/cmangos/mangos-classic.git
-ARG CMANGOS_CORE_REVISION=master
+ARG CMANGOS_CORE_REVISION=1b3795fcd824338938bb67a0be79cafd26231065
 ARG CMANGOS_DATABASE_REPOSITORY_URL=https://github.com/cmangos/classic-db.git
-ARG CMANGOS_DATABASE_REVISION=master
+ARG CMANGOS_DATABASE_REVISION=250a705a462c1acb457d3002359c7e0052c4dafe
 ARG CMANGOS_PLAYERBOTS_REPOSITORY_URL=https://github.com/cmangos/playerbots.git
-ARG CMANGOS_PLAYERBOTS_REVISION=master
+ARG CMANGOS_PLAYERBOTS_REVISION=21af55995bebd84bc3154730f0e69dc964e3753f
 ARG CMANGOS_PATCHES_REPOSITORY_URL
 ARG CMANGOS_FAIL_ON_PATCH_ERROR=0
 ARG CMANGOS_MIGRATION_EDITS=
@@ -26,6 +26,9 @@ ARG CMANGOS_PLAYERBOTS_REVISION
 ARG CMANGOS_PATCHES_REPOSITORY_URL
 ARG CMANGOS_FAIL_ON_PATCH_ERROR
 
+COPY --chmod=755 ./docker/apply-patches.sh /usr/local/bin/apply-cmangos-patches
+COPY ./patches /build/local-patches
+
 RUN \
   apt update && \
   apt install -y --no-install-recommends \
@@ -39,47 +42,27 @@ RUN \
   git checkout "$CMANGOS_DATABASE_REVISION" && \
   cd /build/playerbots && \
   git checkout "$CMANGOS_PLAYERBOTS_REVISION" && \
-  cd /build/core && \
+  apply-cmangos-patches \
+    /build/local-patches \
+    "$CMANGOS_EXPANSION" \
+    /build/core \
+    /build/database \
+    /build/playerbots \
+    1 \
+    local && \
   if [ -n "$CMANGOS_PATCHES_REPOSITORY_URL" ]; then \
     echo "Cloning and applying patches from $CMANGOS_PATCHES_REPOSITORY_URL"; \
     git clone "$CMANGOS_PATCHES_REPOSITORY_URL" /build/patches && \
-    patch_count=0 && \
-    # Patches in `all` (and per-repo subdirectories under `all`) are applied to
-    # every expansion; patches in `<expansion>` (and per-repo subdirectories
-    # there) only to that expansion. Top-level `*.patch` files apply to
-    # `/build/core`; `database/*.patch` and `playerbots/*.patch` apply to the
-    # corresponding cloned source tree.
-    # The expansion-specific and per-repo subdirectories are optional and may
-    # not exist.
-    for patch in \
-      /build/patches/all/*.patch \
-      /build/patches/"$CMANGOS_EXPANSION"/*.patch \
-      /build/patches/all/database/*.patch \
-      /build/patches/"$CMANGOS_EXPANSION"/database/*.patch \
-      /build/patches/all/playerbots/*.patch \
-      /build/patches/"$CMANGOS_EXPANSION"/playerbots/*.patch; \
-    do \
-      if [ -f "$patch" ]; then \
-        case "$patch" in \
-          */database/*) target=/build/database ;; \
-          */playerbots/*) target=/build/playerbots ;; \
-          *) target=/build/core ;; \
-        esac; \
-        echo "Applying patch $patch (to '$target')"; \
-        if ! ( cd "$target" && git apply "$patch" ); then \
-          echo "Failed to apply patch $patch"; \
-          if [ "$CMANGOS_FAIL_ON_PATCH_ERROR" = "1" ]; then \
-            exit 1; \
-          fi; \
-        fi; \
-        patch_count=$((patch_count + 1)); \
-      fi; \
-    done; \
-    if [ "$patch_count" -eq 0 ]; then \
-      echo "No patches found"; \
-    fi; \
+    apply-cmangos-patches \
+      /build/patches \
+      "$CMANGOS_EXPANSION" \
+      /build/core \
+      /build/database \
+      /build/playerbots \
+      "$CMANGOS_FAIL_ON_PATCH_ERROR" \
+      external; \
   else \
-    echo "No repository to apply patches from provided"; \
+    echo "No external patch repository provided"; \
   fi && \
   mkdir -p /sql/core /sql/custom /sql/database /sql/playerbots && \
   cp -a /build/core/sql/base /sql/core/base && \

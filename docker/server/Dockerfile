@@ -4,9 +4,9 @@
 ARG DEBIAN_FRONTEND=noninteractive
 ARG CMANGOS_EXPANSION=classic
 ARG CMANGOS_CORE_REPOSITORY_URL=https://github.com/cmangos/mangos-classic.git
-ARG CMANGOS_CORE_REVISION=master
+ARG CMANGOS_CORE_REVISION=1b3795fcd824338938bb67a0be79cafd26231065
 ARG CMANGOS_PLAYERBOTS_REPOSITORY_URL=https://github.com/cmangos/playerbots.git
-ARG CMANGOS_PLAYERBOTS_REVISION=master
+ARG CMANGOS_PLAYERBOTS_REVISION=21af55995bebd84bc3154730f0e69dc964e3753f
 ARG CMANGOS_PATCHES_REPOSITORY_URL
 ARG CMANGOS_FAIL_ON_PATCH_ERROR=0
 ARG CMANGOS_USER_ID=1000
@@ -24,6 +24,9 @@ ARG CMANGOS_PLAYERBOTS_REPOSITORY_URL
 ARG CMANGOS_PLAYERBOTS_REVISION
 ARG CMANGOS_PATCHES_REPOSITORY_URL
 ARG CMANGOS_FAIL_ON_PATCH_ERROR
+
+COPY --chmod=755 ./docker/apply-patches.sh /usr/local/bin/apply-cmangos-patches
+COPY ./patches /build/local-patches
 
 RUN \
   apt update && \
@@ -46,47 +49,27 @@ RUN \
   git checkout "$CMANGOS_PLAYERBOTS_REVISION" && \
   mkdir -p /build/core/src/modules && \
   cp -a /build/playerbots /build/core/src/modules/PlayerBots && \
-  cd /build/core && \
+  apply-cmangos-patches \
+    /build/local-patches \
+    "$CMANGOS_EXPANSION" \
+    /build/core \
+    - \
+    /build/core/src/modules/PlayerBots \
+    1 \
+    local && \
   if [ -n "$CMANGOS_PATCHES_REPOSITORY_URL" ]; then \
     echo "Cloning and applying patches from $CMANGOS_PATCHES_REPOSITORY_URL"; \
     git clone "$CMANGOS_PATCHES_REPOSITORY_URL" /build/patches && \
-    patch_count=0 && \
-    # Patches in `all` (and per-repo subdirectories under `all`) are applied to
-    # every expansion; patches in `<expansion>` (and per-repo subdirectories
-    # there) only to that expansion. Top-level `*.patch` files apply to
-    # `/build/core`; `playerbots/*.patch` applies to
-    # `/build/core/src/modules/PlayerBots`, which is the in-tree copy `mangosd`
-    # actually compiles against (the build does not use `/build/playerbots`
-    # directly). `database/*.patch` files exist for the database image only and
-    # are not applied here.
-    # The expansion-specific and per-repo subdirectories are optional and may
-    # not exist.
-    for patch in \
-      /build/patches/all/*.patch \
-      /build/patches/"$CMANGOS_EXPANSION"/*.patch \
-      /build/patches/all/playerbots/*.patch \
-      /build/patches/"$CMANGOS_EXPANSION"/playerbots/*.patch; \
-    do \
-      if [ -f "$patch" ]; then \
-        case "$patch" in \
-          */playerbots/*) target=/build/core/src/modules/PlayerBots ;; \
-          *) target=/build/core ;; \
-        esac; \
-        echo "Applying patch $patch (to '$target')"; \
-        if ! ( cd "$target" && git apply "$patch" ); then \
-          echo "Failed to apply patch $patch"; \
-          if [ "$CMANGOS_FAIL_ON_PATCH_ERROR" = "1" ]; then \
-            exit 1; \
-          fi; \
-        fi; \
-        patch_count=$((patch_count + 1)); \
-      fi; \
-    done; \
-    if [ "$patch_count" -eq 0 ]; then \
-      echo "No patches found"; \
-    fi; \
+    apply-cmangos-patches \
+      /build/patches \
+      "$CMANGOS_EXPANSION" \
+      /build/core \
+      - \
+      /build/core/src/modules/PlayerBots \
+      "$CMANGOS_FAIL_ON_PATCH_ERROR" \
+      external; \
   else \
-    echo "No repository to apply patches from provided"; \
+    echo "No external patch repository provided"; \
   fi && \
   mkdir -p \
     /opt/cmangos/config \

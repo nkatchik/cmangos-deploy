@@ -1,0 +1,123 @@
+diff --git a/.gitattributes b/.gitattributes
+index 402924d7..30d39c4f 100644
+--- a/.gitattributes
++++ b/.gitattributes
+@@ -2,6 +2,7 @@
+ # strict (no trailing, no tabs)
+ *.cpp        whitespace=trailing-space,space-before-tab,tab-in-indent,cr-at-eol
+ *.h          whitespace=trailing-space,space-before-tab,tab-in-indent,cr-at-eol
++*.in         whitespace=trailing-space,space-before-tab,cr-at-eol
+ 
+ # normal (no trailing)
+ *.sql        whitespace=trailing-space,space-before-tab,cr-at-eol
+diff --git a/playerbot/PlayerbotAIConfig.cpp b/playerbot/PlayerbotAIConfig.cpp
+index 14bd248e..5d2366a6 100644
+--- a/playerbot/PlayerbotAIConfig.cpp
++++ b/playerbot/PlayerbotAIConfig.cpp
+@@ -138,7 +138,9 @@ bool PlayerbotAIConfig::Initialize()
+     tooCloseDistance = config.GetFloatDefault("AiPlayerbot.TooCloseDistance", 5.0f);
+     meleeDistance = config.GetFloatDefault("AiPlayerbot.MeleeDistance", 1.5f);
+     followDistance = config.GetFloatDefault("AiPlayerbot.FollowDistance", 1.5f);
+-    raidFollowDistance = config.GetFloatDefault("AiPlayerbot.RaidFollowDistance", 5.0f);
++    raidFollowDistance = config.GetFloatDefault("AiPlayerbot.RaidFollowDistance", 5.0f);
++    customRaidTargetPlayers = config.GetIntDefault("AiPlayerbot.CustomRaidTargetPlayers", 5);
++    customRaidTargetPlayers = std::max(1u, std::min(5u, customRaidTargetPlayers));
+     wanderMinDistance = config.GetFloatDefault("AiPlayerbot.WanderMinDistance", 5.0f);
+     wanderMaxDistance = config.GetFloatDefault("AiPlayerbot.WanderMaxDistance", 50.0f);
+     whisperDistance = config.GetFloatDefault("AiPlayerbot.WhisperDistance", 6000.0f);
+diff --git a/playerbot/PlayerbotAIConfig.h b/playerbot/PlayerbotAIConfig.h
+index 75c184c5..54cb250a 100644
+--- a/playerbot/PlayerbotAIConfig.h
++++ b/playerbot/PlayerbotAIConfig.h
+@@ -120,8 +120,9 @@ public:
+         gatheringDistance, groupMemberGatheringDistance, groupMemberGatheringDistanceWithActiveMaster, shootDistance,
+         fleeDistance, tooCloseDistance, meleeDistance, followDistance, raidFollowDistance, wanderMinDistance, wanderMaxDistance, whisperDistance, contactDistance,
+         aoeRadius, rpgDistance, targetPosRecalcDistance, farDistance, healDistance, aggroDistance, proximityDistance, maxFreeMoveDistance, freeMoveDelay, walkDistance;
+-    uint32 criticalHealth, lowHealth, mediumHealth, almostFullHealth;
+-    uint32 lowMana, mediumMana;
++    uint32 criticalHealth, lowHealth, mediumHealth, almostFullHealth;
++    uint32 lowMana, mediumMana;
++    uint32 customRaidTargetPlayers;
+ 
+     uint32 openGoSpell;
+     bool randomBotAutologin;
+diff --git a/playerbot/PlayerbotMgr.cpp b/playerbot/PlayerbotMgr.cpp
+index 8dc289ec..04851eb9 100644
+--- a/playerbot/PlayerbotMgr.cpp
++++ b/playerbot/PlayerbotMgr.cpp
+@@ -2085,7 +2085,7 @@ std::list<std::string> PlayerbotHolder::HandleGroup(Player* master, const std::s
+     uint8 masterClass = master->getClass();
+     Team team = master->GetTeam();
+     BotRoles masterRole = AiFactory::GetPlayerRoles(master);
+-    uint8 groupSize = 5;
++    uint8 groupSize = sPlayerbotAIConfig.customRaidTargetPlayers;
+     uint8 currentGroupSize = 1;
+     Group* group = master->GetGroup();
+     if (group)
+@@ -2103,11 +2103,13 @@ std::list<std::string> PlayerbotHolder::HandleGroup(Player* master, const std::s
+         std::string key = arg.substr(0, eqPos);
+         std::string value = arg.substr(eqPos + 1);
+ 
+-        if (key == "size" && Qualified::isValidNumberString(value))
+-            groupSize = stoi(value);
++        if (key == "size" && Qualified::isValidNumberString(value))
++            groupSize = stoi(value);
+         else
+             passThroughParam += key + "=" + value + " ";
+-    }
++    }
++
++    groupSize = std::min<uint8>(groupSize, sPlayerbotAIConfig.customRaidTargetPlayers);
+     
+     std::unordered_map<uint8, std::unordered_map<BotRoles, uint32>> allowedClassNr = LfgAction::AllowedClassRoleNr(master, groupSize);
+ 
+diff --git a/playerbot/aiplayerbot.conf.dist.in b/playerbot/aiplayerbot.conf.dist.in
+index 6ce6a8a4..f42450cc 100644
+--- a/playerbot/aiplayerbot.conf.dist.in
++++ b/playerbot/aiplayerbot.conf.dist.in
+@@ -6,7 +6,11 @@
+ ConfVersion=2020072501
+ 
+ # Enable or disable AI Playerbot
+-AiPlayerbot.Enabled = 1
++AiPlayerbot.Enabled = 1
++
++# Maximum total characters (human players plus bots) in a custom Classic raid.
++# Five uses the native LFG role template: 1 tank, 1 healer, and 3 damage roles.
++AiPlayerbot.CustomRaidTargetPlayers = 5
+ 
+ # Enable random bot system
+ AiPlayerbot.RandomBotAutologin = 1
+diff --git a/playerbot/strategy/actions/InviteToGroupAction.cpp b/playerbot/strategy/actions/InviteToGroupAction.cpp
+index 367cd28f..9e4f39a3 100644
+--- a/playerbot/strategy/actions/InviteToGroupAction.cpp
++++ b/playerbot/strategy/actions/InviteToGroupAction.cpp
+@@ -20,6 +20,9 @@ namespace ai
+ 
+         if (Group* group = inviter->GetGroup())
+         {
++            if (group->GetMembersCount() >= sPlayerbotAIConfig.customRaidTargetPlayers)
++                return false;
++
+             if(player->GetPlayerbotAI() && !player->GetPlayerbotAI()->IsRealPlayer())
+                 if (!group->IsRaidGroup() && group->GetMembersCount() > 4)
+                     group->ConvertToRaid();
+@@ -48,6 +51,9 @@ namespace ai
+ 
+         if (group)
+         {
++            if (group->GetMembersCount() >= sPlayerbotAIConfig.customRaidTargetPlayers)
++                return false;
++
+             if (group->IsFull())
+             {
+                 if(group->IsRaidGroup())
+@@ -228,6 +234,8 @@ namespace ai
+         if (!Qualified::isValidNumberString(param))
+            param = "5";
+ 
++        param = std::to_string(sPlayerbotAIConfig.customRaidTargetPlayers);
++
+         if (group)
+         {
+             //If no input use max raid for raid groups.

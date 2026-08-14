@@ -1,0 +1,46 @@
+diff --git a/Updates/9997_five_character_raid_scaling.sql b/Updates/9997_five_character_raid_scaling.sql
+new file mode 100644
+index 00000000..db854c38
+--- /dev/null
++++ b/Updates/9997_five_character_raid_scaling.sql
+@@ -0,0 +1,40 @@
++-- Five-character scaling calibration for raids and world bosses available
++-- at the Classic 1.8.4 progression boundary.
++
++CREATE TABLE IF NOT EXISTS `custom_raid_scaling` (
++  `map_id` smallint unsigned NOT NULL,
++  `creature_id` mediumint unsigned NOT NULL DEFAULT '0',
++  `calibration_players` tinyint unsigned NOT NULL DEFAULT '5',
++  `health_multiplier` float unsigned NOT NULL DEFAULT '1',
++  `damage_multiplier` float unsigned NOT NULL DEFAULT '1',
++  `comment` varchar(255) NOT NULL DEFAULT '',
++  PRIMARY KEY (`map_id`, `creature_id`)
++) ENGINE=MyISAM DEFAULT CHARSET=utf8mb3 COMMENT='Custom five-character raid scaling';
++
++DELETE FROM `custom_raid_scaling`;
++INSERT INTO `custom_raid_scaling`
++  (`map_id`, `creature_id`, `calibration_players`, `health_multiplier`, `damage_multiplier`, `comment`)
++VALUES
++  (249,     0, 5, 0.20, 0.55, 'Onyxia''s Lair map default'),
++  (249, 10184, 5, 0.24, 0.52, 'Onyxia encounter override'),
++  (309,     0, 5, 0.35, 0.65, 'Zul''Gurub map default'),
++  (309, 14834, 5, 0.36, 0.60, 'Hakkar encounter override'),
++  (409,     0, 5, 0.20, 0.55, 'Molten Core map default'),
++  (409, 11502, 5, 0.24, 0.50, 'Ragnaros encounter override'),
++  (469,     0, 5, 0.20, 0.55, 'Blackwing Lair map default'),
++  (469, 12435, 5, 0.25, 0.55, 'Razorgore encounter override'),
++  (469, 11583, 5, 0.22, 0.52, 'Nefarian encounter override'),
++  (  0, 12397, 5, 0.20, 0.55, 'Lord Kazzak'),
++  (  1,  6109, 5, 0.20, 0.55, 'Azuregos'),
++  (  0, 14887, 5, 0.20, 0.55, 'Ysondre in Eastern Kingdoms'),
++  (  1, 14887, 5, 0.20, 0.55, 'Ysondre in Kalimdor'),
++  (  0, 14888, 5, 0.20, 0.55, 'Lethon in Eastern Kingdoms'),
++  (  1, 14888, 5, 0.20, 0.55, 'Lethon in Kalimdor'),
++  (  0, 14889, 5, 0.20, 0.55, 'Emeriss in Eastern Kingdoms'),
++  (  1, 14889, 5, 0.20, 0.55, 'Emeriss in Kalimdor'),
++  (  0, 14890, 5, 0.20, 0.55, 'Taerar in Eastern Kingdoms'),
++  (  1, 14890, 5, 0.20, 0.55, 'Taerar in Kalimdor');
++
++UPDATE `instance_template`
++SET `maxPlayers` = 5
++WHERE `map` IN (249, 309, 409, 469);

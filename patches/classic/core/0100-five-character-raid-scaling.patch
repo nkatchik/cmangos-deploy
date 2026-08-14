@@ -1,0 +1,327 @@
+diff --git a/src/game/Entities/Creature.cpp b/src/game/Entities/Creature.cpp
+index a10fdbb08..0fbdcdc88 100644
+--- a/src/game/Entities/Creature.cpp
++++ b/src/game/Entities/Creature.cpp
+@@ -21,6 +21,7 @@
+ #include "Server/WorldPacket.h"
+ #include "World/World.h"
+ #include "Globals/ObjectMgr.h"
++#include "Globals/CustomRaidScaling.h"
+ #include "Globals/ObjectAccessor.h"
+ #include "Entities/ObjectGuid.h"
+ #include "Server/SQLStorages.h"
+@@ -1415,6 +1416,9 @@ void Creature::SelectLevel(uint32 forcedLevel /*= USE_DEFAULT_DATABASE_LEVEL*/)
+     }
+ 
+     health *= _GetHealthMod(rank); // Apply custom config setting
++    // Player pets and guardians must keep their normal health contribution.
++    if (!IsPet() && !IsPlayerControlled() && !GetOwnerGuid().IsPlayer())
++        health *= sCustomRaidScalingMgr.GetHealthMultiplier(GetMapId(), GetEntry());
+     if (health < 1)
+         health = 1;
+ 
+diff --git a/src/game/Entities/Unit.cpp b/src/game/Entities/Unit.cpp
+index 00986af9e..5a1b78e72 100644
+--- a/src/game/Entities/Unit.cpp
++++ b/src/game/Entities/Unit.cpp
+@@ -23,6 +23,7 @@
+ #include "Server/WorldSession.h"
+ #include "World/World.h"
+ #include "Globals/ObjectMgr.h"
++#include "Globals/CustomRaidScaling.h"
+ #include "Entities/ObjectGuid.h"
+ #include "Spells/SpellMgr.h"
+ #include "Entities/Player.h"
+@@ -901,6 +902,13 @@ void Unit::FallSuicide()
+ 
+ uint32 Unit::DealDamage(Unit* dealer, Unit* victim, uint32 damage, CleanDamage const* cleanDamage, DamageEffectType damagetype, SpellSchoolMask damageSchoolMask, SpellEntry const* spellInfo, bool durabilityLoss, Spell* spell)
+ {
++    if (damage && dealer && dealer != victim && dealer->GetTypeId() == TYPEID_UNIT &&
++            !dealer->IsPlayerControlled() && !dealer->GetOwnerGuid().IsPlayer() && damagetype != INSTAKILL)
++    {
++        float multiplier = sCustomRaidScalingMgr.GetDamageMultiplier(dealer->GetMapId(), dealer->GetEntry());
++        damage = std::max(uint32(1), uint32(damage * multiplier));
++    }
++
+     // remove affects from attacker at any non-DoT damage (including 0 damage)
+     if (damagetype != DOT && damagetype != INSTAKILL)
+     {
+diff --git a/src/game/Globals/CustomRaidScaling.cpp b/src/game/Globals/CustomRaidScaling.cpp
+new file mode 100644
+index 000000000..32c660441
+--- /dev/null
++++ b/src/game/Globals/CustomRaidScaling.cpp
+@@ -0,0 +1,130 @@
++/*
++ * This file is part of the CMaNGOS Project. See AUTHORS file for Copyright information
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ */
++
++#include "CustomRaidScaling.h"
++
++#include "Database/DatabaseEnv.h"
++#include "Log/Log.h"
++#include "World/World.h"
++
++#include <algorithm>
++
++CustomRaidScalingMgr& CustomRaidScalingMgr::Instance()
++{
++    static CustomRaidScalingMgr instance;
++    return instance;
++}
++
++uint64 CustomRaidScalingMgr::MakeKey(uint32 mapId, uint32 creatureEntry)
++{
++    return (uint64(mapId) << 32) | creatureEntry;
++}
++
++void CustomRaidScalingMgr::Load()
++{
++    m_scaling.clear();
++
++    if (!sWorld.getConfig(CONFIG_BOOL_CUSTOM_RAID_SCALING_ENABLED))
++    {
++        sLog.outString("Custom five-character raid scaling is disabled");
++        return;
++    }
++
++    std::unique_ptr<QueryResult> result(WorldDatabase.Query(
++        "SELECT map_id, creature_id, calibration_players, health_multiplier, damage_multiplier "
++        "FROM custom_raid_scaling"));
++
++    if (!result)
++    {
++        sLog.outErrorDb("Custom raid scaling is enabled, but `custom_raid_scaling` is missing or empty");
++        return;
++    }
++
++    BarGoLink bar(result->GetRowCount());
++    uint32 count = 0;
++    do
++    {
++        Field* fields = result->Fetch();
++        bar.step();
++
++        uint32 mapId = fields[0].GetUInt32();
++        uint32 creatureEntry = fields[1].GetUInt32();
++        CustomRaidScalingData data;
++        data.calibrationPlayers = fields[2].GetUInt32();
++        data.healthMultiplier = fields[3].GetFloat();
++        data.damageMultiplier = fields[4].GetFloat();
++
++        if (!data.calibrationPlayers || data.healthMultiplier <= 0.0f || data.damageMultiplier <= 0.0f)
++        {
++            sLog.outErrorDb(
++                "Invalid custom raid scaling row for map %u and creature %u; all multipliers and calibration_players must be positive",
++                mapId, creatureEntry);
++            continue;
++        }
++
++        m_scaling[MakeKey(mapId, creatureEntry)] = data;
++        ++count;
++    }
++    while (result->NextRow());
++
++    sLog.outString(">> Loaded %u custom raid scaling definitions for a target of %u character(s)",
++        count, sWorld.getConfig(CONFIG_UINT32_CUSTOM_RAID_SCALING_TARGET_PLAYERS));
++    sLog.outString();
++}
++
++CustomRaidScalingData const* CustomRaidScalingMgr::Find(uint32 mapId, uint32 creatureEntry) const
++{
++    auto itr = m_scaling.find(MakeKey(mapId, creatureEntry));
++    if (itr != m_scaling.end())
++        return &itr->second;
++
++    itr = m_scaling.find(MakeKey(mapId, 0));
++    return itr == m_scaling.end() ? nullptr : &itr->second;
++}
++
++float CustomRaidScalingMgr::AdjustForTargetPlayers(float multiplier, uint32 calibrationPlayers) const
++{
++    float targetPlayers = float(sWorld.getConfig(CONFIG_UINT32_CUSTOM_RAID_SCALING_TARGET_PLAYERS));
++    return std::min(1.0f, multiplier * targetPlayers / float(calibrationPlayers));
++}
++
++float CustomRaidScalingMgr::GetHealthMultiplier(uint32 mapId, uint32 creatureEntry) const
++{
++    CustomRaidScalingData const* data = Find(mapId, creatureEntry);
++    return data ? AdjustForTargetPlayers(data->healthMultiplier, data->calibrationPlayers) : 1.0f;
++}
++
++float CustomRaidScalingMgr::GetDamageMultiplier(uint32 mapId, uint32 creatureEntry) const
++{
++    CustomRaidScalingData const* data = Find(mapId, creatureEntry);
++    return data ? AdjustForTargetPlayers(data->damageMultiplier, data->calibrationPlayers) : 1.0f;
++}
++
++uint32 CustomRaidScalingMgr::GetMaxPlayers(uint32 mapId, uint32 configuredMaximum) const
++{
++    if (!IsEnabledForMap(mapId))
++        return configuredMaximum;
++
++    return std::min(configuredMaximum, sWorld.getConfig(CONFIG_UINT32_CUSTOM_RAID_SCALING_TARGET_PLAYERS));
++}
++
++bool CustomRaidScalingMgr::IsEnabledForMap(uint32 mapId) const
++{
++    return sWorld.getConfig(CONFIG_BOOL_CUSTOM_RAID_SCALING_ENABLED) &&
++        m_scaling.find(MakeKey(mapId, 0)) != m_scaling.end();
++}
++
++uint32 CustomRaidScalingMgr::GetMechanicCount(uint32 mapId, uint32 originalCount, uint32 fivePlayerCount) const
++{
++    if (!IsEnabledForMap(mapId))
++        return originalCount;
++
++    uint32 targetPlayers = sWorld.getConfig(CONFIG_UINT32_CUSTOM_RAID_SCALING_TARGET_PLAYERS);
++    return std::max(1u, (fivePlayerCount * targetPlayers + 4) / 5);
++}
+diff --git a/src/game/Globals/CustomRaidScaling.h b/src/game/Globals/CustomRaidScaling.h
+new file mode 100644
+index 000000000..3f8286ed3
+--- /dev/null
++++ b/src/game/Globals/CustomRaidScaling.h
+@@ -0,0 +1,48 @@
++/*
++ * This file is part of the CMaNGOS Project. See AUTHORS file for Copyright information
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ */
++
++#ifndef CUSTOM_RAID_SCALING_H
++#define CUSTOM_RAID_SCALING_H
++
++#include "Common.h"
++
++#include <unordered_map>
++
++struct CustomRaidScalingData
++{
++    uint32 calibrationPlayers = 5;
++    float healthMultiplier = 1.0f;
++    float damageMultiplier = 1.0f;
++};
++
++class CustomRaidScalingMgr
++{
++    public:
++        static CustomRaidScalingMgr& Instance();
++
++        void Load();
++        float GetHealthMultiplier(uint32 mapId, uint32 creatureEntry) const;
++        float GetDamageMultiplier(uint32 mapId, uint32 creatureEntry) const;
++        uint32 GetMaxPlayers(uint32 mapId, uint32 configuredMaximum) const;
++        uint32 GetMechanicCount(uint32 mapId, uint32 originalCount, uint32 fivePlayerCount) const;
++
++    private:
++        using ScalingMap = std::unordered_map<uint64, CustomRaidScalingData>;
++
++        static uint64 MakeKey(uint32 mapId, uint32 creatureEntry);
++        CustomRaidScalingData const* Find(uint32 mapId, uint32 creatureEntry) const;
++        float AdjustForTargetPlayers(float multiplier, uint32 calibrationPlayers) const;
++        bool IsEnabledForMap(uint32 mapId) const;
++
++        ScalingMap m_scaling;
++};
++
++#define sCustomRaidScalingMgr CustomRaidScalingMgr::Instance()
++
++#endif
+diff --git a/src/game/Maps/Map.cpp b/src/game/Maps/Map.cpp
+index 13896f973..348bcb36d 100644
+--- a/src/game/Maps/Map.cpp
++++ b/src/game/Maps/Map.cpp
+@@ -30,6 +30,7 @@
+ #include "Entities/Transports.h"
+ #include "Globals/ObjectAccessor.h"
+ #include "Globals/ObjectMgr.h"
++#include "Globals/CustomRaidScaling.h"
+ #include "World/World.h"
+ #include "Groups/Group.h"
+ #include "MapRefManager.h"
+@@ -2045,7 +2046,7 @@ uint32 DungeonMap::GetMaxPlayers() const
+     InstanceTemplate const* iTemplate = ObjectMgr::GetInstanceTemplate(GetId());
+     if (!iTemplate)
+         return 0;
+-    return iTemplate->maxPlayers;
++    return sCustomRaidScalingMgr.GetMaxPlayers(GetId(), iTemplate->maxPlayers);
+ }
+ 
+ DungeonPersistentState* DungeonMap::GetPersistanceState() const
+diff --git a/src/game/World/World.cpp b/src/game/World/World.cpp
+index e344c52c1..1fad0d4e8 100644
+--- a/src/game/World/World.cpp
++++ b/src/game/World/World.cpp
+@@ -34,6 +34,7 @@
+ #include "AuctionHouse/AuctionHouseMgr.h"
+ #include "Globals/ObjectMgr.h"
+ #include "Globals/ObjectAccessor.h"
++#include "Globals/CustomRaidScaling.h"
+ #include "AI/EventAI/CreatureEventAIMgr.h"
+ #include "AI/ScriptDevAI/ScriptDevAIMgr.h"
+ #include "Guilds/GuildMgr.h"
+@@ -571,6 +572,8 @@ void World::LoadConfigSettings(bool reload)
+     setConfig(CONFIG_BOOL_INSTANCE_IGNORE_LEVEL, "Instance.IgnoreLevel", false);
+     setConfig(CONFIG_BOOL_INSTANCE_IGNORE_RAID,  "Instance.IgnoreRaid", false);
+     setConfig(CONFIG_BOOL_INSTANCE_STRICT_COMBAT_LOCKDOWN,  "Instance.StrictCombatLockdown", false);
++    setConfig(CONFIG_BOOL_CUSTOM_RAID_SCALING_ENABLED, "Custom.RaidScaling.Enabled", false);
++    setConfigMinMax(CONFIG_UINT32_CUSTOM_RAID_SCALING_TARGET_PLAYERS, "Custom.RaidScaling.TargetPlayers", 5, 1, 5);
+ 
+     setConfig(CONFIG_BOOL_CAST_UNSTUCK, "CastUnstuck", true);
+     setConfig(CONFIG_UINT32_MAX_SPELL_CASTS_IN_CHAIN, "MaxSpellCastsInChain", 20);
+@@ -932,6 +935,9 @@ void World::SetInitialWorldSettings()
+     sLog.outString("Loading InstanceTemplate...");
+     sObjectMgr.LoadInstanceTemplate();
+ 
++    sLog.outString("Loading custom raid scaling definitions...");
++    sCustomRaidScalingMgr.Load();
++
+     sLog.outString("Loading SkillLineAbilityMultiMaps Data...");
+     sSpellMgr.LoadSkillLineAbilityMaps();
+ 
+diff --git a/src/game/World/World.h b/src/game/World/World.h
+index 5d19b35cd..44fb2d958 100644
+--- a/src/game/World/World.h
++++ b/src/game/World/World.h
+@@ -200,6 +200,7 @@ enum eConfigUInt32Values
+     CONFIG_UINT32_CREATURE_PICKPOCKET_RESTOCK_DELAY,
+     CONFIG_UINT32_CHANNEL_STATIC_AUTO_TRESHOLD,
+     CONFIG_UINT32_LFG_MATCHMAKING_TIMER,
++    CONFIG_UINT32_CUSTOM_RAID_SCALING_TARGET_PLAYERS,
+     CONFIG_UINT32_VALUE_COUNT
+ };
+ 
+@@ -355,6 +356,7 @@ enum eConfigBoolValues
+     CONFIG_BOOL_DISABLE_INSTANCE_RELOCATE,
+     CONFIG_BOOL_PRELOAD_MMAP_TILES,
+     CONFIG_BOOL_REGEN_ZONE_AREA_ON_STARTUP,
++    CONFIG_BOOL_CUSTOM_RAID_SCALING_ENABLED,
+     CONFIG_BOOL_VALUE_COUNT
+ };
+ 
+diff --git a/src/mangosd/mangosd.conf.dist.in b/src/mangosd/mangosd.conf.dist.in
+index 18013abb6..987d1014e 100644
+--- a/src/mangosd/mangosd.conf.dist.in
++++ b/src/mangosd/mangosd.conf.dist.in
+@@ -844,6 +844,12 @@ RabbitDay = 0
+ Instance.IgnoreLevel = 0
+ Instance.IgnoreRaid = 0
+ Instance.StrictCombatLockdown = 0
++
++# Enable data-driven custom raid scaling. Definitions are loaded from the
++# `custom_raid_scaling` world database table. Retained raid maps also use the
++# target as their hard instance-player cap. Supported target range: 1-5.
++Custom.RaidScaling.Enabled = 0
++Custom.RaidScaling.TargetPlayers = 5
+ Instance.ResetTimeHour = 4
+ Instance.UnloadDelay = 1800000
+ Instance.DisableRelocate = 0

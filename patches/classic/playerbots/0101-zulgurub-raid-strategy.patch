@@ -1,0 +1,194 @@
+diff --git a/playerbot/strategy/StrategyContext.h b/playerbot/strategy/StrategyContext.h
+index 1b69d60b..2dc61791 100644
+--- a/playerbot/strategy/StrategyContext.h
++++ b/playerbot/strategy/StrategyContext.h
+@@ -53,7 +53,8 @@
+ #include "generic/DungeonStrategy.h"
+ #include "generic/OnyxiasLairDungeonStrategies.h"
+ #include "generic/MoltenCoreDungeonStrategies.h"
+-#include "generic/BlackwingLairDungeonStrategies.h"
++#include "generic/BlackwingLairDungeonStrategies.h"
++#include "generic/ZulGurubDungeonStrategies.h"
+ #include "generic/KarazhanDungeonStrategies.h"
+ #include "generic/NaxxramasDungeonStrategies.h"
+ #include "generic/MechanarDungeonStrategies.h"
+@@ -169,7 +170,8 @@ namespace ai
+             creators["dungeon"] = [](PlayerbotAI* ai) { return new DungeonStrategy(ai); };
+             creators["onyxia's lair"] = [](PlayerbotAI* ai) { return new OnyxiasLairDungeonStrategy(ai); };
+             creators["molten core"] = [](PlayerbotAI* ai) { return new MoltenCoreDungeonStrategy(ai); };
+-            creators["blackwing lair"] = [](PlayerbotAI* ai) { return new BlackwingLairDungeonStrategy(ai); };
++            creators["blackwing lair"] = [](PlayerbotAI* ai) { return new BlackwingLairDungeonStrategy(ai); };
++            creators["zul'gurub"] = [](PlayerbotAI* ai) { return new ZulGurubDungeonStrategy(ai); };
+             creators["karazhan"] = [](PlayerbotAI* ai) { return new KarazhanDungeonStrategy(ai); };
+             creators["naxxramas"] = [](PlayerbotAI* ai) { return new NaxxramasDungeonStrategy(ai); };
+             creators["mechanar"] = [](PlayerbotAI* ai) { return new MechanarDungeonStrategy(ai); };
+diff --git a/playerbot/strategy/actions/ActionContext.h b/playerbot/strategy/actions/ActionContext.h
+index d4f3ab10..8351c5cc 100644
+--- a/playerbot/strategy/actions/ActionContext.h
++++ b/playerbot/strategy/actions/ActionContext.h
+@@ -76,7 +76,8 @@
+ 
+ #include "OnyxiasLairDungeonActions.h"
+ #include "MoltenCoreDungeonActions.h"
+-#include "BlackwingLairDungeonActions.h"
++#include "BlackwingLairDungeonActions.h"
++#include "ZulGurubDungeonActions.h"
+ #include "KarazhanDungeonActions.h"
+ #include "NaxxramasDungeonActions.h"
+ #include "MechanarDungeonActions.h"
+@@ -370,7 +371,9 @@ namespace ai
+             creators["enable molten core strategy"] = [](PlayerbotAI* ai) { return new MoltenCoreEnableDungeonStrategyAction(ai); };
+             creators["disable molten core strategy"] = [](PlayerbotAI* ai) { return new MoltenCoreDisableDungeonStrategyAction(ai); };
+             creators["enable blackwing lair strategy"] = [](PlayerbotAI* ai) { return new BlackwingLairEnableDungeonStrategyAction(ai); };
+-            creators["disable blackwing lair strategy"] = [](PlayerbotAI* ai) { return new BlackwingLairDisableDungeonStrategyAction(ai); };
++            creators["disable blackwing lair strategy"] = [](PlayerbotAI* ai) { return new BlackwingLairDisableDungeonStrategyAction(ai); };
++            creators["enable zul'gurub strategy"] = [](PlayerbotAI* ai) { return new ZulGurubEnableDungeonStrategyAction(ai); };
++            creators["disable zul'gurub strategy"] = [](PlayerbotAI* ai) { return new ZulGurubDisableDungeonStrategyAction(ai); };
+             creators["enable karazhan strategy"] = [](PlayerbotAI* ai) { return new KarazhanEnableDungeonStrategyAction(ai); };
+             creators["disable karazhan strategy"] = [](PlayerbotAI* ai) { return new KarazhanDisableDungeonStrategyAction(ai); };
+             creators["enable naxxramas strategy"] = [](PlayerbotAI* ai) { return new NaxxramasEnableDungeonStrategyAction(ai); };
+diff --git a/playerbot/strategy/actions/ZulGurubDungeonActions.h b/playerbot/strategy/actions/ZulGurubDungeonActions.h
+new file mode 100644
+index 00000000..efe890d1
+--- /dev/null
++++ b/playerbot/strategy/actions/ZulGurubDungeonActions.h
+@@ -0,0 +1,17 @@
++#pragma once
++#include "ChangeStrategyAction.h"
++
++namespace ai
++{
++    class ZulGurubEnableDungeonStrategyAction : public ChangeAllStrategyAction
++    {
++    public:
++        ZulGurubEnableDungeonStrategyAction(PlayerbotAI* ai) : ChangeAllStrategyAction(ai, "enable zul'gurub strategy", "+zul'gurub") {}
++    };
++
++    class ZulGurubDisableDungeonStrategyAction : public ChangeAllStrategyAction
++    {
++    public:
++        ZulGurubDisableDungeonStrategyAction(PlayerbotAI* ai) : ChangeAllStrategyAction(ai, "disable zul'gurub strategy", "-zul'gurub") {}
++    };
++}
+diff --git a/playerbot/strategy/generic/DungeonStrategy.cpp b/playerbot/strategy/generic/DungeonStrategy.cpp
+index 43f0a57e..0bcdbd00 100644
+--- a/playerbot/strategy/generic/DungeonStrategy.cpp
++++ b/playerbot/strategy/generic/DungeonStrategy.cpp
+@@ -19,6 +19,10 @@ void DungeonStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
+         "enter blackwing lair",
+         NextAction::array(0, new NextAction("enable blackwing lair strategy", 100.0f), NULL)));
+ 
++    triggers.push_back(new TriggerNode(
++        "enter zul'gurub",
++        NextAction::array(0, new NextAction("enable zul'gurub strategy", 100.0f), NULL)));
++
+     triggers.push_back(new TriggerNode(
+         "enter karazhan",
+         NextAction::array(0, new NextAction("enable karazhan strategy", 100.0f), NULL)));
+@@ -54,6 +58,14 @@ void DungeonStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
+         "leave blackwing lair",
+         NextAction::array(0, new NextAction("disable blackwing lair strategy", 100.0f), NULL)));
+ 
++    triggers.push_back(new TriggerNode(
++        "enter zul'gurub",
++        NextAction::array(0, new NextAction("enable zul'gurub strategy", 100.0f), NULL)));
++
++    triggers.push_back(new TriggerNode(
++        "leave zul'gurub",
++        NextAction::array(0, new NextAction("disable zul'gurub strategy", 100.0f), NULL)));
++
+     triggers.push_back(new TriggerNode(
+         "enter karazhan",
+         NextAction::array(0, new NextAction("enable karazhan strategy", 100.0f), NULL)));
+@@ -69,4 +81,4 @@ void DungeonStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
+     triggers.push_back(new TriggerNode(
+         "leave mechanar",
+         NextAction::array(0, new NextAction("disable mechanar strategy", 100.0f), NULL)));
+-}
+\ No newline at end of file
++}
+diff --git a/playerbot/strategy/generic/DungeonStrategy.h b/playerbot/strategy/generic/DungeonStrategy.h
+index e8c31102..fd159200 100644
+--- a/playerbot/strategy/generic/DungeonStrategy.h
++++ b/playerbot/strategy/generic/DungeonStrategy.h
+@@ -15,11 +15,11 @@ namespace ai
+         {
+             return "This strategy will enable and disable various dungeon and raid specific strategies as the bot enters and leaves.";
+         }
+-        virtual std::vector<std::string> GetRelatedStrategies() { return {"onyxia's lair", "molten core" }; }
++        virtual std::vector<std::string> GetRelatedStrategies() { return {"onyxia's lair", "molten core", "blackwing lair", "zul'gurub" }; }
+ #endif
+ 
+     private:
+         void InitCombatTriggers(std::list<TriggerNode*>& triggers) override;
+         void InitNonCombatTriggers(std::list<TriggerNode*>& triggers) override;
+     };
+-}
+\ No newline at end of file
++}
+diff --git a/playerbot/strategy/generic/ZulGurubDungeonStrategies.h b/playerbot/strategy/generic/ZulGurubDungeonStrategies.h
+new file mode 100644
+index 00000000..54bc3186
+--- /dev/null
++++ b/playerbot/strategy/generic/ZulGurubDungeonStrategies.h
+@@ -0,0 +1,12 @@
++#pragma once
++#include "playerbot/strategy/Strategy.h"
++
++namespace ai
++{
++    class ZulGurubDungeonStrategy : public Strategy
++    {
++    public:
++        ZulGurubDungeonStrategy(PlayerbotAI* ai) : Strategy(ai) {}
++        std::string getName() override { return "zul'gurub"; }
++    };
++}
+diff --git a/playerbot/strategy/triggers/TriggerContext.h b/playerbot/strategy/triggers/TriggerContext.h
+index 628a9951..f9952a96 100644
+--- a/playerbot/strategy/triggers/TriggerContext.h
++++ b/playerbot/strategy/triggers/TriggerContext.h
+@@ -16,7 +16,8 @@
+ #include "PullTriggers.h"
+ #include "OnyxiasLairDungeonTriggers.h"
+ #include "MoltenCoreDungeonTriggers.h"
+-#include "BlackwingLairDungeonTriggers.h"
++#include "BlackwingLairDungeonTriggers.h"
++#include "ZulGurubDungeonTriggers.h"
+ #include "KarazhanDungeonTriggers.h"
+ #include "NaxxramasDungeonTriggers.h"
+ #include "MechanarDungeonTriggers.h"
+@@ -309,7 +310,9 @@ namespace ai
+             creators["enter naxxramas"] = [](PlayerbotAI* ai) { return new NaxxramasEnterDungeonTrigger(ai); };
+             creators["leave naxxramas"] = [](PlayerbotAI* ai) { return new NaxxramasLeaveDungeonTrigger(ai); };
+             creators["enter blackwing lair"] = [](PlayerbotAI* ai) { return new BlackwingLairEnterDungeonTrigger(ai); };
+-            creators["leave blackwing lair"] = [](PlayerbotAI* ai) { return new BlackwingLairLeaveDungeonTrigger(ai); };
++            creators["leave blackwing lair"] = [](PlayerbotAI* ai) { return new BlackwingLairLeaveDungeonTrigger(ai); };
++            creators["enter zul'gurub"] = [](PlayerbotAI* ai) { return new ZulGurubEnterDungeonTrigger(ai); };
++            creators["leave zul'gurub"] = [](PlayerbotAI* ai) { return new ZulGurubLeaveDungeonTrigger(ai); };
+             creators["enter mechanar"] = [](PlayerbotAI* ai) { return new MechanarEnterDungeonTrigger(ai); };
+             creators["leave mechanar"] = [](PlayerbotAI* ai) { return new MechanarLeaveDungeonTrigger(ai); };
+ 
+diff --git a/playerbot/strategy/triggers/ZulGurubDungeonTriggers.h b/playerbot/strategy/triggers/ZulGurubDungeonTriggers.h
+new file mode 100644
+index 00000000..d492f3a2
+--- /dev/null
++++ b/playerbot/strategy/triggers/ZulGurubDungeonTriggers.h
+@@ -0,0 +1,17 @@
++#pragma once
++#include "DungeonTriggers.h"
++
++namespace ai
++{
++    class ZulGurubEnterDungeonTrigger : public EnterDungeonTrigger
++    {
++    public:
++        ZulGurubEnterDungeonTrigger(PlayerbotAI* ai) : EnterDungeonTrigger(ai, "enter zul'gurub", "zul'gurub", 309) {}
++    };
++
++    class ZulGurubLeaveDungeonTrigger : public LeaveDungeonTrigger
++    {
++    public:
++        ZulGurubLeaveDungeonTrigger(PlayerbotAI* ai) : LeaveDungeonTrigger(ai, "leave zul'gurub", "zul'gurub", 309) {}
++    };
++}

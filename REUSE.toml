@@ -3,8 +3,17 @@ version = 1
 [[annotations]]
 path = [".github/ISSUE_TEMPLATE/*", ".github/logo.webp", "README.md"]
 precedence = "aggregate"
-SPDX-FileCopyrightText = "2026 Michael Serajnik <https://github.com/mserajnik>"
+SPDX-FileCopyrightText = [
+  "2026 Michael Serajnik <https://github.com/mserajnik>",
+  "2026 Nikita Katchik",
+]
 SPDX-License-Identifier = "CC-BY-SA-4.0"
+
+[[annotations]]
+path = ["patches/**", "tests/**", "docs/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Nikita Katchik"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
 
 [[annotations]]
 path = [

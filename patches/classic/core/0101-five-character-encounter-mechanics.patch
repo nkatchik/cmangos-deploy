@@ -1,0 +1,192 @@
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.cpp
+index 7cedd62c7..07efd22b7 100644
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.cpp
+@@ -24,6 +24,7 @@ EndScriptData
+ */
+ 
+ #include "AI/ScriptDevAI/include/sc_common.h"
++#include "Globals/CustomRaidScaling.h"
+ #include "blackwing_lair.h"
+ 
+ instance_blackwing_lair::instance_blackwing_lair(Map* pMap) : ScriptedInstance(pMap),
+@@ -332,7 +333,8 @@ void instance_blackwing_lair::SetData64(uint32 uiData, uint64 uiGuid)
+             m_lUsedEggsGuids.push_back(pEgg->GetObjectGuid());
+ 
+         // If all eggs are destroyed, then allow Razorgore to be attacked
+-        if (m_lUsedEggsGuids.size() == m_lDragonEggsGuids.size())
++        uint32 requiredEggs = sCustomRaidScalingMgr.GetMechanicCount(instance->GetId(), m_lDragonEggsGuids.size(), 8);
++        if (m_lUsedEggsGuids.size() >= requiredEggs)
+         {
+             SetData(TYPE_RAZORGORE, SPECIAL);
+             DoToggleGameObjectFlags(GO_ORB_OF_DOMINATION, GO_FLAG_NO_INTERACT, true);
+@@ -410,7 +412,8 @@ void instance_blackwing_lair::OnCreatureDeath(Creature* pCreature)
+         case NPC_CHROMATIC_DRAKONID:
+             m_uiDeadDrakonidsCount++;
+             // If the requiered amount of drakonids are killed, start phase 2
+-            if (m_uiDeadDrakonidsCount >= MAX_DRAKONID_SUMMONS && GetData(TYPE_NEFARIAN) == IN_PROGRESS)
++            uint32 requiredDrakonids = sCustomRaidScalingMgr.GetMechanicCount(instance->GetId(), MAX_DRAKONID_SUMMONS, 10);
++            if (m_uiDeadDrakonidsCount >= requiredDrakonids && GetData(TYPE_NEFARIAN) == IN_PROGRESS)
+                 SetData(TYPE_NEFARIAN, SPECIAL);
+             break;
+     }
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_majordomo_executus.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_majordomo_executus.cpp
+index c7a62b4e4..817bb8bfd 100644
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_majordomo_executus.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_majordomo_executus.cpp
+@@ -236,7 +236,7 @@ struct boss_majordomoAI : public CombatAI
+             }
+ 
+             // If 4 adds (half of them) are dead, make all remaining healers immune to polymorph via aura
+-            if (m_addsKilled >= MAX_MAJORDOMO_ADDS / 2)
++            if (m_addsKilled >= m_luiMajordomoAddsGUIDs.size() / 2)
+                 DoCastSpellIfCan(nullptr, SPELL_IMMUNE_POLY);
+ 
+             // Buff the remaining adds
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_ragnaros.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_ragnaros.cpp
+index 6e946e6ef..78f8907ae 100644
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_ragnaros.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_ragnaros.cpp
+@@ -24,6 +24,7 @@ EndScriptData
+ */
+ 
+ #include "AI/ScriptDevAI/include/sc_common.h"
++#include "Globals/CustomRaidScaling.h"
+ #include "molten_core.h"
+ #include "AI/ScriptDevAI/base/CombatAI.h"
+ 
+@@ -93,6 +94,7 @@ struct boss_ragnarosAI : public CombatAI
+     instance_molten_core* m_instance;
+ 
+     uint32 m_uiAddCount;
++    uint32 m_uiSummonedSons;
+     uint32 m_phase;
+     int32 m_rangeCheckState;
+ 
+@@ -106,6 +108,7 @@ struct boss_ragnarosAI : public CombatAI
+     {
+         CombatAI::Reset();
+         m_uiAddCount = 0;
++        m_uiSummonedSons = 0;
+         m_phase = PHASE_EMERGED;
+         m_rangeCheckState       = -1;
+ 
+@@ -158,7 +161,8 @@ struct boss_ragnarosAI : public CombatAI
+         // If all Sons of Flame are dead, trigger emerge
+         if (summoned->GetEntry() == NPC_SON_OF_FLAME)
+         {
+-            m_uiAddCount--;
++            if (m_uiAddCount)
++                --m_uiAddCount;
+ 
+             // If last add killed then emerge soonish
+             if (m_uiAddCount == 0)
+@@ -170,6 +174,14 @@ struct boss_ragnarosAI : public CombatAI
+     {
+         if (summoned->GetEntry() == NPC_SON_OF_FLAME)
+         {
++            uint32 maxSons = sCustomRaidScalingMgr.GetMechanicCount(m_creature->GetMapId(), NB_ADDS_IN_SUBMERGE, 3);
++            if (m_uiSummonedSons >= maxSons)
++            {
++                summoned->ForcedDespawn();
++                return;
++            }
++
++            ++m_uiSummonedSons;
+             summoned->AI()->DoCastSpellIfCan(nullptr, SPELL_DOUBLE_ATTACK, CAST_TRIGGERED | CAST_AURA_NOT_PRESENT);
+             summoned->AI()->DoCastSpellIfCan(nullptr, SPELL_LAVA_SHIELD, CAST_TRIGGERED | CAST_AURA_NOT_PRESENT);
+             summoned->SetInCombatWithZone();
+@@ -229,8 +241,9 @@ struct boss_ragnarosAI : public CombatAI
+                 m_bHasSubmergedOnce = true;
+ 
+                 // Summon 8 elementals around the boss
++                m_uiSummonedSons = 0;
+                 if (DoCastSpellIfCan(nullptr, SPELL_SUMMON_SONS_FLAME) == CAST_OK)
+-                    m_uiAddCount = NB_ADDS_IN_SUBMERGE;
++                    m_uiAddCount = sCustomRaidScalingMgr.GetMechanicCount(m_creature->GetMapId(), NB_ADDS_IN_SUBMERGE, 3);
+ 
+                 ResetCombatAction(RAGNAROS_PHASE_TRANSITION, 3000);
+                 m_phase = PHASE_SUBMERGING;
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/molten_core.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/molten_core.cpp
+index 7b3912249..a0a78beac 100644
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/molten_core.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/molten_core.cpp
+@@ -24,6 +24,7 @@ EndScriptData
+ */
+ 
+ #include "AI/ScriptDevAI/include/sc_common.h"
++#include "Globals/CustomRaidScaling.h"
+ #include "molten_core.h"
+ 
+ static SpawnLocation m_aBosspawnLocs[MAX_MAJORDOMO_ADDS] =
+@@ -241,8 +242,14 @@ void instance_molten_core::SpawnMajordomo(Unit* summoner, bool initialSummon, ui
+             if (initialSummon)
+                 DoScriptText(SAY_MAJORDOMO_SPAWN, pMajordomo);
+ 
+-            for (auto& m_aBosspawnLoc : m_aBosspawnLocs)
+-                pMajordomo->SummonCreature(m_aBosspawnLoc.m_spawnEntry, m_aBosspawnLoc.m_fx, m_aBosspawnLoc.m_fy, m_aBosspawnLoc.m_fz, m_aBosspawnLoc.m_fo, TEMPSPAWN_MANUAL_DESPAWN, DAY * IN_MILLISECONDS);
++            uint32 addCount = sCustomRaidScalingMgr.GetMechanicCount(pMajordomo->GetMapId(), MAX_MAJORDOMO_ADDS, 4);
++            for (uint32 i = 0; i < addCount; ++i)
++            {
++                // Alternate elites and healers so the reduced wave retains the encounter's composition.
++                uint32 spawnIndex = (i % 2 == 0) ? i / 2 : MAX_MAJORDOMO_ADDS / 2 + i / 2;
++                SpawnLocation const& spawn = m_aBosspawnLocs[spawnIndex];
++                pMajordomo->SummonCreature(spawn.m_spawnEntry, spawn.m_fx, spawn.m_fy, spawn.m_fz, spawn.m_fo, TEMPSPAWN_MANUAL_DESPAWN, DAY * IN_MILLISECONDS);
++            }
+         }
+     }
+ }
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_renataki.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_renataki.cpp
+index 762a90711..5d9630dd2 100644
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_renataki.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_renataki.cpp
+@@ -25,6 +25,7 @@ EndScriptData
+ 
+ #include "AI/ScriptDevAI/include/sc_common.h"
+ #include "AI/ScriptDevAI/base/CombatAI.h"
++#include "Globals/CustomRaidScaling.h"
+ 
+ enum
+ {
+@@ -107,7 +108,8 @@ struct ThousandBladesRenataki : public SpellScript
+         // remove current target
+         selectedTargets.erase(std::remove(selectedTargets.begin(), selectedTargets.end(), spell->m_targets.getUnitTarget()), selectedTargets.end());
+         std::shuffle(selectedTargets.begin(), selectedTargets.end(), *GetRandomGenerator());
+-        selectedTargets.resize(9);
++        uint32 targetCount = sCustomRaidScalingMgr.GetMechanicCount(caster->GetMapId(), 9, 3);
++        selectedTargets.resize(std::min<size_t>(selectedTargets.size(), targetCount));
+         for (Unit* target : selectedTargets)
+             caster->CastSpell(target, SPELL_THOUSAND_BLADES, TRIGGERED_OLD_TRIGGERED | TRIGGERED_INSTANT_CAST);
+     }
+diff --git a/src/game/AI/ScriptDevAI/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp b/src/game/AI/ScriptDevAI/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp
+index 9a223ef5b..da19bb841 100644
+--- a/src/game/AI/ScriptDevAI/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp
+@@ -24,6 +24,7 @@ EndScriptData
+ */
+ 
+ #include "AI/ScriptDevAI/include/sc_common.h"
++#include "Globals/CustomRaidScaling.h"
+ #include "onyxias_lair.h"
+ #include "AI/ScriptDevAI/base/CombatAI.h"
+ 
+@@ -192,7 +193,7 @@ struct boss_onyxiaAI : public CombatAI
+         m_uiMovePoint = POINT_ID_NORTH;                     // First point reached by the flying Onyxia
+ 
+         m_uiSummonCount = 0;
+-        m_uiWhelpsPerWave = 20;                               // Twenty whelps on first summon, 4 - 10 on the nexts
++        m_uiWhelpsPerWave = sCustomRaidScalingMgr.GetMechanicCount(m_creature->GetMapId(), 20, 4);
+ 
+         m_bHasYelledLured = false;
+         m_HasSummonedFirstWave = false;
+@@ -308,7 +309,9 @@ struct boss_onyxiaAI : public CombatAI
+         {
+             ResetTimer(ONYXIA_SUMMON_WHELPS, 90 * IN_MILLISECONDS - m_uiWhelpsPerWave * (m_HasSummonedFirstWave ? 3000 : 1750));
+             m_HasSummonedFirstWave = true;
+-            m_uiWhelpsPerWave = urand(4, 10);
++            uint32 minWhelps = sCustomRaidScalingMgr.GetMechanicCount(m_creature->GetMapId(), 4, 2);
++            uint32 maxWhelps = sCustomRaidScalingMgr.GetMechanicCount(m_creature->GetMapId(), 10, 3);
++            m_uiWhelpsPerWave = urand(minWhelps, maxWhelps);
+             m_uiSummonCount = 0;
+             return;
+         }

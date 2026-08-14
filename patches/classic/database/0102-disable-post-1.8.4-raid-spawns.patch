@@ -1,0 +1,58 @@
+diff --git a/Updates/Instances/999_disable_post_1_8_4_raids.sql b/Updates/Instances/999_disable_post_1_8_4_raids.sql
+new file mode 100644
+index 00000000..ce4bc3ab
+--- /dev/null
++++ b/Updates/Instances/999_disable_post_1_8_4_raids.sql
+@@ -0,0 +1,52 @@
++-- Run after all upstream instance packs so later upstream refreshes cannot
++-- silently respawn AQ20, AQ40, or Naxxramas content.
++
++DROP TEMPORARY TABLE IF EXISTS `custom_disabled_creature`;
++DROP TEMPORARY TABLE IF EXISTS `custom_disabled_gameobject`;
++DROP TEMPORARY TABLE IF EXISTS `custom_disabled_spawn_group`;
++
++CREATE TEMPORARY TABLE `custom_disabled_creature`
++  (SELECT `guid`, `id`, `map` FROM `creature` WHERE `map` IN (509, 531, 533));
++CREATE TEMPORARY TABLE `custom_disabled_gameobject`
++  (SELECT `guid`, `id`, `map` FROM `gameobject` WHERE `map` IN (509, 531, 533));
++CREATE TEMPORARY TABLE `custom_disabled_spawn_group`
++  (SELECT DISTINCT `Id` FROM `spawn_group_spawn`
++   WHERE `Guid` IN (SELECT `guid` FROM `custom_disabled_creature`)
++      OR `Guid` IN (SELECT `guid` FROM `custom_disabled_gameobject`));
++
++ALTER TABLE `custom_disabled_creature` ADD INDEX (`guid`), ADD INDEX (`id`);
++ALTER TABLE `custom_disabled_gameobject` ADD INDEX (`guid`), ADD INDEX (`id`);
++ALTER TABLE `custom_disabled_spawn_group` ADD PRIMARY KEY (`Id`);
++
++DELETE FROM `pool_creature` WHERE `guid` IN (SELECT `guid` FROM `custom_disabled_creature`);
++DELETE FROM `pool_gameobject` WHERE `guid` IN (SELECT `guid` FROM `custom_disabled_gameobject`);
++DELETE FROM `creature_movement` WHERE `id` IN (SELECT `guid` FROM `custom_disabled_creature`);
++DELETE FROM `creature_addon` WHERE `guid` IN (SELECT `guid` FROM `custom_disabled_creature`);
++DELETE FROM `game_event_creature` WHERE `guid` IN (SELECT `guid` FROM `custom_disabled_creature`);
++DELETE FROM `game_event_creature_data` WHERE `guid` IN (SELECT `guid` FROM `custom_disabled_creature`);
++DELETE FROM `creature_linking` WHERE `guid` IN (SELECT `guid` FROM `custom_disabled_creature`) OR `master_guid` IN (SELECT `guid` FROM `custom_disabled_creature`);
++DELETE FROM `creature_linking_template` WHERE `map` IN (509, 531, 533);
++DELETE FROM `npc_gossip` WHERE `npc_guid` IN (SELECT `guid` FROM `custom_disabled_creature`);
++DELETE FROM `creature_battleground` WHERE `guid` IN (SELECT `guid` FROM `custom_disabled_creature`);
++DELETE FROM `creature_spawn_entry` WHERE `guid` IN (SELECT `guid` FROM `custom_disabled_creature`);
++DELETE FROM `creature_spawn_data` WHERE `guid` IN (SELECT `guid` FROM `custom_disabled_creature`);
++
++DELETE FROM `dbscripts_on_go_use` WHERE `id` IN (SELECT `guid` FROM `custom_disabled_gameobject`);
++DELETE FROM `game_event_gameobject` WHERE `guid` IN (SELECT `guid` FROM `custom_disabled_gameobject`);
++DELETE FROM `gameobject_battleground` WHERE `guid` IN (SELECT `guid` FROM `custom_disabled_gameobject`);
++DELETE FROM `gameobject_addon` WHERE `guid` IN (SELECT `guid` FROM `custom_disabled_gameobject`);
++DELETE FROM `gameobject_spawn_entry` WHERE `guid` IN (SELECT `guid` FROM `custom_disabled_gameobject`);
++
++DELETE FROM `spawn_group_linked_group` WHERE `Id` IN (SELECT `Id` FROM `custom_disabled_spawn_group`) OR `LinkedId` IN (SELECT `Id` FROM `custom_disabled_spawn_group`);
++DELETE FROM `spawn_group_formation` WHERE `Id` IN (SELECT `Id` FROM `custom_disabled_spawn_group`);
++DELETE FROM `spawn_group_squad` WHERE `Id` IN (SELECT `Id` FROM `custom_disabled_spawn_group`);
++DELETE FROM `spawn_group_entry` WHERE `Id` IN (SELECT `Id` FROM `custom_disabled_spawn_group`);
++DELETE FROM `spawn_group_spawn` WHERE `Id` IN (SELECT `Id` FROM `custom_disabled_spawn_group`);
++DELETE FROM `spawn_group` WHERE `Id` IN (SELECT `Id` FROM `custom_disabled_spawn_group`);
++
++DELETE FROM `creature` WHERE `guid` IN (SELECT `guid` FROM `custom_disabled_creature`);
++DELETE FROM `gameobject` WHERE `guid` IN (SELECT `guid` FROM `custom_disabled_gameobject`);
++
++DROP TEMPORARY TABLE `custom_disabled_spawn_group`;
++DROP TEMPORARY TABLE `custom_disabled_gameobject`;
++DROP TEMPORARY TABLE `custom_disabled_creature`;

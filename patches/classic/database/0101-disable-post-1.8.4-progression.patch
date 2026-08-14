@@ -1,0 +1,100 @@
+diff --git a/Updates/9998_disable_post_1_8_4_progression.sql b/Updates/9998_disable_post_1_8_4_progression.sql
+new file mode 100644
+index 00000000..ca2b0b75
+--- /dev/null
++++ b/Updates/9998_disable_post_1_8_4_progression.sql
+@@ -0,0 +1,94 @@
++-- Custom Classic progression boundary: patch 1.8.4 (2005-12-06).
++-- AQ20, AQ40, and Naxxramas were released after 1.8.4. Removing the instance
++-- templates and every teleport targeting them makes them inaccessible through
++-- normal play even if a future upstream update adds a new entrance trigger.
++DELETE FROM `areatrigger_teleport` WHERE `target_map` IN (509, 531, 533);
++DELETE FROM `instance_template` WHERE `map` IN (509, 531, 533);
++
++-- Disable the AQ war effort and Scourge Invasion state machines, including
++-- their child events. Relation cleanup prevents orphaned conditional spawns.
++DELETE FROM `game_event_creature` WHERE ABS(`event`) IN (17, 22, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135);
++DELETE FROM `game_event_creature_data` WHERE `event` IN (17, 22, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135);
++DELETE FROM `game_event_gameobject` WHERE ABS(`event`) IN (17, 22, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135);
++DELETE FROM `game_event_mail` WHERE ABS(`event`) IN (17, 22, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135);
++DELETE FROM `game_event_quest` WHERE `event` IN (17, 22, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135);
++DELETE FROM `game_event_time` WHERE `entry` IN (17, 22, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135);
++DELETE FROM `game_event` WHERE `entry` IN (17, 22, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135);
++
++DROP TEMPORARY TABLE IF EXISTS `custom_disabled_raid_quests`;
++CREATE TEMPORARY TABLE `custom_disabled_raid_quests` (
++  `entry` mediumint unsigned NOT NULL PRIMARY KEY
++);
++
++-- Scepter of the Shifting Sands chain and AQ launch/war-effort quests.
++INSERT IGNORE INTO `custom_disabled_raid_quests` (`entry`) VALUES
++  (8286),(8288),(8301),(8303),(8305),(8306),(8314),(8315),(8519),(8555),
++  (8575),(8576),(8577),(8578),(8579),(8584),(8585),(8586),(8587),(8597),
++  (8598),(8599),(8606),(8620),(8728),(8729),(8730),(8733),(8734),(8735),
++  (8736),(8741),(8742),(8743),(8744),(8745);
++
++INSERT IGNORE INTO `custom_disabled_raid_quests` (`entry`)
++SELECT `entry` FROM `quest_template`
++WHERE `entry` BETWEEN 8492 AND 8550
++   OR `entry` BETWEEN 8580 AND 8583
++   OR `entry` BETWEEN 8588 AND 8591
++   OR `entry` BETWEEN 8600 AND 8616
++   OR `entry` IN (8687, 8731, 8732)
++   OR `entry` BETWEEN 8737 AND 8740
++   OR `entry` BETWEEN 8770 AND 8787
++   OR `entry` BETWEEN 8792 AND 8797
++   OR `entry` BETWEEN 8804 AND 8826
++   OR `entry` BETWEEN 8830 AND 8859;
++
++-- AQ20/AQ40 reputation, token, tier, and boss-reward quests.
++INSERT IGNORE INTO `custom_disabled_raid_quests` (`entry`)
++SELECT `entry` FROM `quest_template`
++WHERE `entry` BETWEEN 8556 AND 8562
++   OR `entry` BETWEEN 8592 AND 8596
++   OR `entry` BETWEEN 8602 AND 8603
++   OR `entry` BETWEEN 8621 AND 8634
++   OR `entry` BETWEEN 8637 AND 8641
++   OR `entry` BETWEEN 8655 AND 8669
++   OR `entry` BETWEEN 8689 AND 8712
++   OR `entry` BETWEEN 8747 AND 8761
++   OR `entry` BETWEEN 8764 AND 8766
++   OR `entry` IN (8784, 8789, 8790, 8791, 8800, 8801, 8802, 8829);
++
++-- Naxxramas attunement, tier, crafting, Atiesh, and Scourge Invasion quests.
++INSERT IGNORE INTO `custom_disabled_raid_quests` (`entry`)
++SELECT `entry` FROM `quest_template`
++WHERE `entry` IN (9033, 9034)
++   OR `entry` BETWEEN 9036 AND 9050
++   OR `entry` BETWEEN 9054 AND 9061
++   OR `entry` BETWEEN 9068 AND 9075
++   OR `entry` BETWEEN 9077 AND 9132
++   OR `entry` IN (9136, 9137, 9142, 9153, 9154, 9165, 9178, 9179)
++   OR `entry` BETWEEN 9181 AND 9187
++   OR `entry` IN (9190, 9191)
++   OR `entry` BETWEEN 9194 AND 9198
++   OR `entry` BETWEEN 9200 AND 9206
++   OR `entry` BETWEEN 9208 AND 9211
++   OR `entry` IN (9213)
++   OR `entry` BETWEEN 9221 AND 9230
++   OR `entry` BETWEEN 9232 AND 9247
++   OR `entry` IN (9250, 9251, 9257)
++   OR `entry` BETWEEN 9260 AND 9265
++   OR `entry` BETWEEN 9269 AND 9271
++   OR `entry` IN (9292, 9295)
++   OR `entry` BETWEEN 9299 AND 9304
++   OR `entry` IN (9310)
++   OR `entry` BETWEEN 9317 AND 9319
++   OR `entry` BETWEEN 9333 AND 9335
++   OR `entry` IN (9386);
++
++UPDATE `quest_template`
++SET `MinLevel` = 255
++WHERE `entry` IN (SELECT `entry` FROM `custom_disabled_raid_quests`);
++
++DELETE FROM `creature_questrelation` WHERE `quest` IN (SELECT `entry` FROM `custom_disabled_raid_quests`);
++DELETE FROM `creature_involvedrelation` WHERE `quest` IN (SELECT `entry` FROM `custom_disabled_raid_quests`);
++DELETE FROM `gameobject_questrelation` WHERE `quest` IN (SELECT `entry` FROM `custom_disabled_raid_quests`);
++DELETE FROM `gameobject_involvedrelation` WHERE `quest` IN (SELECT `entry` FROM `custom_disabled_raid_quests`);
++DELETE FROM `game_event_quest` WHERE `quest` IN (SELECT `entry` FROM `custom_disabled_raid_quests`);
++
++DROP TEMPORARY TABLE `custom_disabled_raid_quests`;

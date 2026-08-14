@@ -1,4 +1,5 @@
 *.conf linguist-language=INI
-*.conf.example linguist-language=INI
+*.conf.example linguist-language=INI whitespace=cr-at-eol
+*.patch whitespace=-blank-at-eol
 *.sql.example linguist-language=SQL
 compose*.yaml.example linguist-language=YAML
