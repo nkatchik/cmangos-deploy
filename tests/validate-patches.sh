@@ -57,6 +57,10 @@ rg -q 'boss_health_multiplier, boss_damage_multiplier' "$work_dir/core/src/game/
 rg -q 'creatureDealer->IsWorldBoss' "$work_dir/core/src/game/Entities/Unit.cpp"
 rg -Fq 'GetMechanicCount(instance->GetId(), MAX_STADIUM_MOBS_PER_WAVE, 3)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackrock_spire/instance_blackrock_spire.cpp"
 rg -q 'WHERE `map` IN \(509, 531, 533\)' "$work_dir/database/Updates/9998_disable_post_1_8_4_progression.sql"
+rg -Fq "(229, 10899, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Goraluk Anvilcrack');" \
+  "$work_dir/database/Updates/9999_custom_02_tiered_raid_tuning.sql"
+ubrs_scaling_rows=$(rg -c '^  \(229,' "$work_dir/database/Updates/9999_custom_02_tiered_raid_tuning.sql")
+[[ "$ubrs_scaling_rows" -eq 27 ]]
 rg -q 'customRaidTargetPlayers' "$work_dir/playerbots/playerbot/strategy/actions/InviteToGroupAction.cpp"
 "$repo_root/tests/validate-honor-policy.sh" "$work_dir/core"
 rg -Fq 'Custom.Honor.InstantProgression.Enabled = 1' "$repo_root/config/classic/mangosd.conf.example"

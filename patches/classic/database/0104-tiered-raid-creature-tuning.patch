@@ -3,7 +3,7 @@ new file mode 100644
 index 00000000..fb835fc5
 --- /dev/null
 +++ b/Updates/9999_custom_02_tiered_raid_tuning.sql
-@@ -0,0 +1,78 @@
+@@ -0,0 +1,81 @@
 +-- Keep raid bosses on a five-character encounter budget while making ordinary
 +-- raid elites comparable to difficult dungeon elites. This lets a well-geared
 +-- level-60 character defeat one isolated elite without making a full trash
