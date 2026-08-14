@@ -1,803 +1,229 @@
-<h1>
-  <img src=".github/logo.webp" alt="" height="100">
-  <br>
-  cmangos-deploy
-</h1>
+# CMaNGOS Classic 1.8.4 five-character fork
 
-[![Lint status][badge-lint-status]][badge-lint-status-url]
-[![Build status][badge-build-status]][badge-build-status-url]\
-[![Latest Classic build][badge-latest-classic-build]][badge-latest-classic-build-url]\
-[![Latest TBC build][badge-latest-tbc-build]][badge-latest-tbc-build-url]\
-[![Latest WotLK build][badge-latest-wotlk-build]][badge-latest-wotlk-build-url]\
-[![Latest build date][badge-latest-build-date]][badge-latest-build-date-url]
+This is a fork of
+[`mserajnik/cmangos-deploy`](https://github.com/mserajnik/cmangos-deploy) for a
+specific Classic server: raid progression stops at patch 1.8.4, retained raids
+are tuned for five total characters, PlayerBots are included, and honor uses
+immediate personal progression.
 
-> A Docker setup for CMaNGOS
+Only this fork's differences and the shortest supported startup path are
+documented here. For the base deployment's internals, optional services, and
+general configuration reference, use the upstream repository.
 
-> [!TIP]
-> Also check out my similar Docker setups:
->
-> - [vmangos-deploy][vmangos-deploy] for [VMaNGOS][vmangos], a progressive
->   Vanilla server emulator that aims to eventually support all versions from
->   `1.2.4.4222` to `1.12.1.5875`.
-> - [tortoise-deploy][tortoise-deploy] for [Tortoise-WoW][tortoise-wow], a
->   community-driven restoration of Turtle WoW's `1.18.1.7272` patch with
->   additions for solo play.
+## What differs from upstream
 
-cmangos-deploy is a Docker-based solution for running [CMaNGOS][cmangos] that
-focuses on providing a streamlined and user-friendly experience. It is largely
-based on [vmangos-deploy][vmangos-deploy] and offers a range of features that
-simplify managing a CMaNGOS setup:
+### Classic content and raids
 
-- __Prebuilt Docker images for both `amd64` and `arm64`, leveraging GitHub__
-  __Actions__: simply pull the provided images that have been optimized for
-  size, performance and stability instead of having to re-compile CMaNGOS
-  yourself every time you want to update.
-- __Support for all three CMaNGOS expansions__: Classic, TBC and WotLK are each
-  available as separate prebuilt images.
-- __Built-in [Playerbots][playerbots] support__: bots can be spawned on demand,
-  or they can populate the world automatically.
-- __Seamless, automated database migrations__: when pulling the latest Docker
-  images and re-creating the containers, migrations are applied automatically
-  to keep your database up to date at all times.
-- __A transparent and easy-to-follow user experience__: the number of different
-  commands that need to be run to install and manage CMaNGOS is kept to a
-  minimum. You can use the Docker CLI or any other tool that is able to manage
-  Docker containers.
-- __A clean and organized structure__: the CMaNGOS configuration for each
-  expansion can be found in [`config/<expansion>/`](config), everything else
-  that is shared between the Docker containers and your host system lives
-  inside [`storage/<expansion>/`](storage).
+The deployment builds pinned CMaNGOS Classic, Classic-DB, and PlayerBots source
+locally and applies the patches stored in [`patches/classic`](patches/classic).
+No external patch repository is required.
 
-> [!NOTE]
-> The Docker images are built on a daily schedule, unless there have been no
-> new commits to CMaNGOS since the last build. Additionally, every Monday, the
-> latest images are rebuilt to ensure software and dependencies are up to date,
-> even if there have been no updates to CMaNGOS itself.
+- Molten Core, Onyxia's Lair, Blackwing Lair, Zul'Gurub, Azuregos, Lord Kazzak,
+  and the four Dragons of Nightmare are retained.
+- Ruins of Ahn'Qiraj, Temple of Ahn'Qiraj, Naxxramas, their entrances and
+  spawns, and directly dependent progression are disabled because they were
+  released after 1.8.4.
+- Retained raid instances accept at most five total characters. A normal group
+  is one human and four bots, converted to a raid before entry.
+- The default PlayerBots role template is one tank, one healer, and three DPS.
+- Raid health and damage scaling is data-driven, with encounter overrides for
+  mechanics such as Onyxia's whelps, Ragnaros's sons, Razorgore's eggs, and
+  Nefarian's phase-one kill count.
 
-## Classic 1.8.4 five-character raid fork
+The supplied tuning is a starting calibration, not a claim that every group
+composition has completed live balance testing. See
+[`tests/README.md`](tests/README.md) for the qualification matrix.
 
-This fork gives the Classic deployment a deliberate progression boundary at
-WoW patch **1.8.4 (2005-12-06)** and tunes the raids available at that date for
-a raid roster of at most five total characters, including PlayerBots. It still
-uses the CMaNGOS 1.12.1 client/core data model; it is a server-side content
-policy, not a recreation of the 1.8.4 client executable or every historical
-class/mechanics detail.
+### Honor progression
 
-- Content target: Vanilla WoW / CMaNGOS Classic
-- Raid-content cutoff: 1.8.4
-- Target raid size: 5 total characters
-- PlayerBots supported: yes
+Weekly standings, brackets, recalculation, and decay are replaced with
+immediate permanent rank-point gains.
 
-The cutoff follows the original release sequence: Blackwing Lair arrived in
-[1.6.0](https://warcraft.wiki.gg/wiki/Patch_1.6.0), Zul'Gurub in
-[1.7.0](https://warcraft.wiki.gg/wiki/Patch_1.7.0), and the four Dragons of
-Nightmare in [1.8.0](https://warcraft.wiki.gg/wiki/Patch_1.8.0). Patch
-[1.8.4](https://warcraft.wiki.gg/wiki/Patch_1.8.4) was the last release before
-Ahn'Qiraj in [1.9.0](https://warcraft.wiki.gg/wiki/Patch_1.9.0) and Naxxramas in
-[1.11.0](https://warcraft.wiki.gg/wiki/Patch_1.11.0).
-
-### Raid status and tuning
-
-| Content | Policy | Five-character baseline | Encounter-specific changes and current limitations |
-| ------- | ------ | ----------------------- | -------------------------------------------------- |
-| Molten Core | Retained; maximum 5 characters | Creature health 20%, creature damage 55% | Ragnaros uses 24%/50%, summons 3 Sons of Flame; Majordomo keeps a mixed 2-elite/2-healer pack. Other multi-add encounters retain their original add counts and need playtesting. |
-| Onyxia's Lair | Retained; maximum 5 characters | Creature health 20%, creature damage 55% | Onyxia uses 24%/52%; the first whelp wave is 4 and later waves are 2-3. Positioning and fear handling remain required. |
-| Blackwing Lair | Retained; maximum 5 characters | Creature health 20%, creature damage 55% | Razorgore uses 25%/55% and needs 8 eggs; Nefarian uses 22%/52% and needs 10 phase-one drakonid kills. Suppression Room, Chromaggus dispels, and class calls still require a suitable composition and are the highest-risk tuning areas. |
-| Zul'Gurub | Retained; maximum 5 characters | Creature health 35%, creature damage 65% | Hakkar uses 36%/60%. PlayerBots have automatic generic Zul'Gurub strategy activation, but no encounter-specific ZG strategy package yet. |
-| Azuregos and Lord Kazzak | Retained | Creature health 20%, creature damage 55% | Outdoor contention, leash behavior, and terrain are unchanged. |
-| Ysondre, Lethon, Emeriss, and Taerar | Retained | Creature health 20%, creature damage 55% | Original dragon-specific mechanics and add patterns remain; these are supported by the scaler but still require encounter-by-encounter playtesting. |
-| Ruins of Ahn'Qiraj (AQ20) | Disabled (released in 1.9) | Not applicable | Instance template, entrances, spawns, war-effort state, and directly dependent quests are unavailable. |
-| Temple of Ahn'Qiraj (AQ40) | Disabled (released in 1.9) | Not applicable | Same enforcement as AQ20, including the Scepter and gong chain. |
-| Naxxramas | Disabled (released in 1.11) | Not applicable | Instance template, entrances, spawns, Scourge Invasion state, attunement, tier, crafting, and Atiesh quests are unavailable. |
-
-These multipliers are a maintainable starting calibration, not a claim that
-every retained encounter has completed live balance qualification. Generic
-scaling is data-driven in `custom_raid_scaling`: a map-default row controls the
-raid, while a `(map_id, creature_id)` row overrides an individual encounter.
-Health is applied when a creature's maximum health is built; creature-origin
-melee, spell, periodic, and scripted damage is adjusted at the central damage
-boundary. Player damage, healing, threat rules, timers, and spell selection are
-left intact so encounter identity is not replaced by a blanket difficulty
-mode.
-
-`Custom.RaidScaling.TargetPlayers` accepts 1-5. Multipliers and the explicit
-roster-bound mechanics scale proportionally from the five-character
-calibration. The supplied configuration uses five, for which PlayerBots'
-native role template is **1 tank, 1 healer, and 3 damage characters**. The
-`AiPlayerbot.CustomRaidTargetPlayers` guard applies to the complete group, so a
-human plus four bots is the normal roster. Convert the five-character party to
-a raid before entering; the normal CMaNGOS raid-group requirement remains on.
-Random-bot auto-spawning stays disabled by default.
-
-The cutoff deliberately preserves unrelated 1.8 Silithus and outdoor content.
-It disables access and progression paths directly tied to the later raids, but
-does not attempt to purge every 1.9-1.12 item, spell, class change, or unrelated
-quest from the 1.12.1 database.
-
-### Instant honor progression
-
-Classic uses personal, permanent honor progression suited to a world populated
-by PlayerBots. Honor is added to the character immediately; weekly standings,
-brackets, rank distribution, decay, and the weekly cap are disabled. PlayerBots
-count as ordinary player opponents and receive no honor penalty.
-
-The supplied rates make outdoor PvP worth five times a Battleground kill or
-Battleground bonus before the normal `Rate.Honor` multiplier is applied:
-
-| Honor source | Rate |
-| ------------ | ---: |
-| Outdoor player or PlayerBot kill | `0.5` |
+| Source | Multiplier |
+| ------ | ---------: |
+| World PvP player or PlayerBot kill | `0.5` |
 | Battleground player or PlayerBot kill | `0.1` |
-| Battleground objective/bonus honor | `0.1` |
+| Battleground objective or bonus | `0.1` |
 
-Repeated kills of the same target on one server day award 100%, 75%, 50%, and
-25% of that source's value; the fifth and later kills award no honor. A
-different target starts at full value. This follows Blizzard's documented
-[original daily diminishing-return sequence](https://news.blizzard.com/en-us/article/23221132/wow-classic-world-bosses-and-pvp-honor-system-available).
+PlayerBots count as ordinary player opponents. Repeated kills of the same
+target on one server day award 100%, 75%, 50%, 25%, then 0%. Rank 1 requires
+15 lifetime honorable kills; Rank 2 starts at 2,000 points, later ranks use
+5,000-point steps, and Rank 14 starts at 60,000. Dishonorable kills cannot
+remove the highest rank already attained by default.
 
-Rank 1 still requires 15 lifetime honorable kills. After that, the permanent
-rank-point thresholds are Rank 2 at 2,000, then 5,000-point steps through Rank
-14 at 60,000, with progress capped at 75,000. Those thresholds preserve the
-[original rank-point breakpoints](https://news.blizzard.com/en-us/article/23221132/wow-classic-world-bosses-and-pvp-honor-system-available)
-without the competitive weekly calculation. By default a dishonorable kill can
-remove progress within the current rank but cannot remove the highest rank
-already attained. Recent per-target kill records are retained for 14 days so
-daily diminishing returns survive restarts; older records are compacted into
-lifetime kill totals.
-
-The policy is controlled by `Custom.Honor.*` in
+The defaults are in
 [`config/classic/mangosd.conf.example`](config/classic/mangosd.conf.example).
-The supplied values are intentionally conservative starting points for bot-only
-PvP and should be adjusted only after the runtime matrix in
-[`tests/README.md`](tests/README.md) has been measured.
 
-### Reproducible source and validation
+## Quick start
 
-The Classic images build locally from pinned upstream revisions and apply the
-deployment-owned patches in [`patches/`](patches). A failed local patch aborts
-the image build. External patch repositories remain optional and have no
-hidden default.
+You need Docker with Compose V2 and a legally obtained WoW Classic 1.12.1
+client. The server uses the 1.12.1 client and data model while enforcing the
+1.8.4 raid-content policy on the server.
 
-The patch layout keeps upstream ownership clear: `patches/classic/core`
-contains the data-driven scaler and encounter-script adjustments,
-`patches/classic/database` contains tuning plus cutoff enforcement, and
-`patches/classic/playerbots` contains group-size and raid-strategy changes.
-Conceptual changes are separate files and are applied in lexical order.
-
-| Source | Pinned revision |
-| ------ | --------------- |
-| `cmangos/mangos-classic` | `1b3795fcd824338938bb67a0be79cafd26231065` |
-| `cmangos/classic-db` | `250a705a462c1acb457d3002359c7e0052c4dafe` |
-| `cmangos/playerbots` | `21af55995bebd84bc3154730f0e69dc964e3753f` |
-
-Copy the Classic Compose example as usual, then build before the first start:
+### 1. Clone and create the working configuration
 
 ```sh
-cp compose-classic.yaml.example compose.yaml
-docker compose build database realmd
-docker compose up -d
-```
-
-The source-level and live database gates are documented in
-[`tests/README.md`](tests/README.md). After the database becomes healthy, run
-`tests/validate-classic-world.sh` to verify both retained raid accessibility
-and post-cutoff raid absence against the actual imported world database.
-
-## Table of contents
-
-- [Classic 1.8.4 five-character raid fork](#classic-184-five-character-raid-fork)
-  - [Raid status and tuning](#raid-status-and-tuning)
-  - [Instant honor progression](#instant-honor-progression)
-  - [Reproducible source and validation](#reproducible-source-and-validation)
-
-- [Install](#install)
-  - [Dependencies](#dependencies)
-  - [Using a coding agent](#using-a-coding-agent)
-  - [Instructions](#instructions)
-    - [Cloning the repository and adjusting the CMaNGOS configuration](#cloning-the-repository-and-adjusting-the-cmangos-configuration)
-    - [Adjusting the Docker Compose configuration](#adjusting-the-docker-compose-configuration)
-    - [Extracting the client data](#extracting-the-client-data)
-    - [Modifying the world database with custom changes (optional)](#modifying-the-world-database-with-custom-changes-optional)
-- [Usage](#usage)
-  - [Starting CMaNGOS](#starting-cmangos)
-  - [Observing the CMaNGOS output](#observing-the-cmangos-output)
-  - [Creating the first account](#creating-the-first-account)
-  - [Stopping CMaNGOS](#stopping-cmangos)
-  - [Updating](#updating)
-    - [What happens during an update](#what-happens-during-an-update)
-    - [When cmangos-deploy asks you to apply changes manually](#when-cmangos-deploy-asks-you-to-apply-changes-manually)
-    - [Breaking changes](#breaking-changes)
-  - [Creating database backups](#creating-database-backups)
-    - [Restoring a backup](#restoring-a-backup)
-  - [Accessing the database](#accessing-the-database)
-  - [Database security](#database-security)
-- [Maintainer](#maintainer)
-- [Contribute](#contribute)
-- [Licenses](#licenses)
-- [Disclaimer](#disclaimer)
-
-## Install
-
-### Dependencies
-
-- [Docker][docker] (including [Compose V2][docker-compose])
-
-### Using a coding agent
-
-If you have a coding agent like [Claude Code][claude-code] or [Codex][codex]
-installed, you can try a prompt similar to the following one to have it assist
-you with the installation process:
-
-```
-Help me install and set up https://github.com/mserajnik/cmangos-deploy.
-First, clone the repository and read the README carefully.
-Then guide me through the installation process step by step, following the
-README closely.
-Do as much of the setup yourself as you safely can so that I only have to step
-in when a manual action or personal preference is required.
-Ask me about my preferences whenever a choice has to be made, explain the
-relevant options clearly, and tailor your instructions to the OS I am using.
-Assume that I am not familiar with CMaNGOS or Docker and that I have not read
-the README myself.
-For steps that I need to perform manually, give me clear instructions and exact
-commands where appropriate.
-Do not assume user-facing choices such as the expansion, optional services, or
-networking-related preferences. Ask me whenever the README presents a
-meaningful choice.
-For settings that the README, the Docker Compose configuration, or the CMaNGOS
-example configuration files indicate should generally be left alone, keep the
-documented defaults unless I explicitly ask for something else.
-Do not change settings that the README, the Docker Compose configuration, or
-the CMaNGOS example configuration files indicate should not be changed.
-```
-
-The exact prompt that works best may vary depending on the coding agent and
-model you use.
-
-> [!CAUTION]
-> You use coding agents at your own risk. You are responsible for the
-> permissions and access you give them. The maintainer of this project is not
-> liable for any damage or data loss resulting from their use. Take appropriate
-> precautions such as sandboxed access and limited permissions, and do not run
-> them with `--yolo` or similar options that bypass safety checks.
-
-### Instructions
-
-#### Cloning the repository and adjusting the CMaNGOS configuration
-
-First, clone the repository:
-
-```sh
-git clone https://github.com/mserajnik/cmangos-deploy.git
+git clone https://github.com/nkatchik/cmangos-deploy.git
 cd cmangos-deploy
+
+cp compose-classic.yaml.example compose.yaml
+cp config/classic/mangosd.conf.example config/classic/mangosd.conf
+cp config/classic/realmd.conf.example config/classic/realmd.conf
+cp config/classic/ahbot.conf.example config/classic/ahbot.conf
+cp config/classic/aiplayerbot.conf.example config/classic/aiplayerbot.conf
+cp config/classic/anticheat.conf.example config/classic/anticheat.conf
+cp config/classic/mods.conf.example config/classic/mods.conf
 ```
 
-cmangos-deploy supports three expansions, each with its own configuration
-directory under [`config/`](config):
+Before first start, edit `compose.yaml`:
 
-- [`config/classic/`](config/classic) for Classic
-- [`config/tbc/`](config/tbc) for TBC
-- [`config/wotlk/`](config/wotlk) for WotLK
+- Set `CMANGOS_REALMLIST_ADDRESS` to `127.0.0.1` for same-machine play, the
+  server's LAN address for LAN play, or its public DNS name/address for Internet
+  play.
+- Set `TZ` as desired.
+- On Linux, if `id -u` or `id -g` is not `1000`, change both `user: 1000:1000`
+  entries to your UID and GID.
+- Change database passwords if desired. If `MARIADB_USER` or
+  `MARIADB_PASSWORD` changes, update the four database connection strings in
+  `config/classic/mangosd.conf` and `config/classic/realmd.conf` to match.
 
-Pick the one matching the expansion you want to run and create copies of the
-provided CMaNGOS example configuration files in that directory. For example,
-for Classic:
+Random world bots are disabled by default to avoid unexpectedly creating
+1,000 bots. To populate the world, edit `config/classic/aiplayerbot.conf`, set
+`AiPlayerbot.RandomBotAutologin = 1`, and choose hardware-appropriate
+`AiPlayerbot.MinRandomBots` and `AiPlayerbot.MaxRandomBots` values first.
+
+### 2. Build the custom images
 
 ```sh
-cp ./config/classic/mangosd.conf.example ./config/classic/mangosd.conf
-cp ./config/classic/realmd.conf.example ./config/classic/realmd.conf
-cp ./config/classic/ahbot.conf.example ./config/classic/ahbot.conf
-cp ./config/classic/aiplayerbot.conf.example ./config/classic/aiplayerbot.conf
-cp ./config/classic/anticheat.conf.example ./config/classic/anticheat.conf
-cp ./config/classic/mods.conf.example ./config/classic/mods.conf
+docker compose build database realmd
 ```
 
-For TBC and WotLK, the same applies with `tbc` or `wotlk` substituted for
-`classic`. Note that `mods.conf.example` only ships for Classic; it does not
-exist for TBC or WotLK.
+This compiles the pinned patched server and prepares the patched Classic
+database image. `mangosd` and `realmd` share the same server image.
 
-Next, adjust the configuration files you have just created for your desired
-setup. The default configuration should work well as a starting point, but you
-may still want to adjust certain things such as the `GameType`, the `RealmZone`
-or `Anticheat.*` and `Warden.*` options. Descriptions are provided for each
-option in the configuration files, so you should be able to find your way
-around easily.
+### 3. Extract the required client data
 
-> [!NOTE]
-> The bundled `aiplayerbot.conf.example` disables auto-spawning random bots by
-> default (`AiPlayerbot.RandomBotAutologin = 0`) and the bundled
-> `ahbot.conf.example` disables AHBot by default
-> (`AuctionHouseBot.Chance.Sell = 0` and `AuctionHouseBot.Chance.Buy = 0`).
-> Both can be re-enabled by adjusting the marked options. Players can still
-> spawn bots manually via the in-game command regardless.
-
-> [!CAUTION]
-> Options relating to certain things that cmangos-deploy relies on to work
-> correctly (like the database connections or configured directories such as
-> the `DataDir` or the `LogsDir`) should not be adjusted unless you absolutely
-> need to change them and are aware of the implications (e.g., which other
-> configuration options may need to be adjusted as well to avoid discrepancies
-> resulting in unexpected behavior). No support will be provided for
-> non-default setups.
-
-#### Adjusting the Docker Compose configuration
-
-Once you are done adjusting the CMaNGOS configuration, copy the Docker Compose
-example file for your chosen expansion to `compose.yaml`. For example, for
-Classic:
+Copy the complete 1.12.1 client into
+`storage/classic/mangosd/client-data/`. The resulting path must contain the
+client's `Data/` directory. Then run:
 
 ```sh
-cp ./compose-classic.yaml.example ./compose.yaml
-```
-
-For TBC and WotLK, use `compose-tbc.yaml.example` or
-`compose-wotlk.yaml.example` instead. The three files share the same structure
-and only differ where the expansion makes them.
-
-The upstream prebuilt images for each expansion are:
-
-| Expansion          | Server image                               | Database image                               |
-| ------------------ | ------------------------------------------ | -------------------------------------------- |
-| Classic (`1.12.1`) | `ghcr.io/mserajnik/cmangos-server-classic` | `ghcr.io/mserajnik/cmangos-database-classic` |
-| TBC (`2.4.3`)      | `ghcr.io/mserajnik/cmangos-server-tbc`     | `ghcr.io/mserajnik/cmangos-database-tbc`     |
-| WotLK (`3.3.5a`)   | `ghcr.io/mserajnik/cmangos-server-wotlk`   | `ghcr.io/mserajnik/cmangos-database-wotlk`   |
-
-The TBC and WotLK examples use the latest available upstream images. This
-fork's Classic example intentionally builds the pinned custom server and
-database images locally; replacing them with the upstream Classic images also
-removes the 1.8.4 cutoff and five-character raid implementation. For an
-unmodified deployment, you can alternatively select upstream images via their
-combined revision tag. Each image is tagged with
-a tag of the form
-`<expansion>-core.<core-revision>-db.<db-revision>-playerbots.<playerbots-revision>`,
-where each revision is a 7-character prefix of the matching commit hash. For
-example, a Classic build might have the tag
-`classic-core.1aea167-db.2c980fa-playerbots.c33dfac` on both the server and
-database images.
-
-> [!IMPORTANT]
-> When you decide to select images via combined revision tag you should always
-> make sure to use the same one for the `cmangos-server-<expansion>` and the
-> `cmangos-database-<expansion>` images so there are no potential discrepancies
-> between code and data. It is _not_ possible (or intended) to switch to images
-> based on older revisions than the previous ones you used to perform a clean
-> downgrade due to the database migrations.
-
-Since the Docker images are generally built only once a day, it is unlikely
-that there will be a build for every single CMaNGOS commit combination. Older
-images are automatically deleted after 14 days; in practice, you should not
-rely on specific images staying available beyond the point in time when you
-originally pulled them. If you absolutely need images based on specific CMaNGOS
-commits, you can always build them yourself instead.
-
-> [!TIP]
-> You can find all the currently available `cmangos-server-<expansion>` and
-> `cmangos-database-<expansion>` images by browsing the packages listed
-> [here][image-cmangos-packages].
-
-Aside from which Docker images you want to use you mainly have to pay attention
-to the `environment` sections of each service configuration. In particular, you
-will want to adjust the `TZ` (time zone) environment variable for each service.
-The `CMANGOS_REALMLIST_*` environment variables of the `database` service
-should also be of interest; changing the `CMANGOS_REALMLIST_ADDRESS` to a LAN
-IP, a WAN IP or a domain name is required if you want to allow non-local
-connections.
-
-> [!CAUTION]
-> Anything in your `compose.yaml` that is not commented or explicitly mentioned
-> in this README, regardless of the section, is likely something you do not
-> have to (or, in some cases, _must not_) change. Doing so may lead to
-> unexpected behavior and is not supported.
-
-#### Extracting the client data
-
-CMaNGOS uses data that is generated from extracted client data to handle things
-like mob movement and line of sight. If you have already acquired this data
-previously, you can place it directly into
-`storage/<expansion>/mangosd/extracted-data/` and skip the next steps.
-
-To extract the data, first copy the contents of your client directory into
-`storage/<expansion>/mangosd/client-data/`. Next, run the following command,
-substituting the image for the expansion you want to extract for. For example,
-for Classic:
-
-```sh
-docker run \
-  -i \
-  -v ./storage/classic/mangosd/client-data:/opt/cmangos/storage/client-data \
-  -v ./storage/classic/mangosd/extracted-data:/opt/cmangos/storage/data \
-  --rm \
-  --user 1000:1000 \
-  --platform linux/amd64 \
-  ghcr.io/mserajnik/cmangos-server-classic \
+docker run -i --rm \
+  --user "$(id -u):$(id -g)" \
+  -v "$PWD/storage/classic/mangosd/client-data:/opt/cmangos/storage/client-data:ro" \
+  -v "$PWD/storage/classic/mangosd/extracted-data:/opt/cmangos/storage/data" \
+  cmangos-custom-server-classic:1.8.4-five-character \
   extract-client-data
 ```
 
-There are two things to look out for here:
+Extraction can take several hours. It is complete when `dbc/`, `maps/`,
+`mmaps/`, and `vmaps/` exist under
+`storage/classic/mangosd/extracted-data/`.
 
-- If you are using a Linux host and your user's UID and GID are not 1000,
-  change the `--user` argument to reflect your user's UID and GID. This will
-  cause the user in the container to use the same UID and GID and prevent
-  permission issues on the bind mounts. If you are on Windows or macOS, you can
-  ignore this (or even remove the `--user` argument altogether, if you want to)
-- The Docker image must reflect the expansion you want to extract the data for
-
-> [!IMPORTANT]
-> The extractors are only included in the `amd64` images because CMaNGOS forces
-> `BUILD_EXTRACTORS=OFF` on `arm64`. The `--platform linux/amd64` flag in the
-> command above ensures the right image variant is used even on `arm64` hosts
-> (running through emulation, which can be slow).
->
-> Extracting the data can take many hours (depending on your hardware). Some
-> notices/errors during the process are normal and usually nothing to worry
-> about (as long as the execution continues afterwards).
-
-Once the extraction is finished you can find the data in
-`storage/<expansion>/mangosd/extracted-data/`. Note that you may want to re-run
-the process in the future if CMaNGOS makes changes (to benefit from potentially
-improved mob movement etc.). In case it becomes necessary to do so (e.g., if
-the extraction process changes), the _[Breaking changes](#breaking-changes)_
-section further below will be updated accordingly.
-
-If you re-run the extraction, it will automatically detect previously extracted
-data and ask you if you want to continue (which will overwrite the old data).
-You can also skip this confirmation prompt (and force the re-extraction) by
-adding the `--force` flag to the `extract-client-data` command, like this:
-
-```sh
-docker run \
-  -i \
-  -v ./storage/classic/mangosd/client-data:/opt/cmangos/storage/client-data \
-  -v ./storage/classic/mangosd/extracted-data:/opt/cmangos/storage/data \
-  --rm \
-  --user 1000:1000 \
-  --platform linux/amd64 \
-  ghcr.io/mserajnik/cmangos-server-classic \
-  extract-client-data --force
-```
-
-#### Modifying the world database with custom changes (optional)
-
-If you want to make custom changes to the world database, it is recommended to
-do so using SQL files and placing them in
-`storage/<expansion>/database/custom-sql/` (a bind mount for this directory is
-[configured out-of-the-box][compose-custom-sql-bind-mount]). The files in this
-directory are processed on every startup, including after cmangos-deploy
-re-creates the world database to apply an upstream migration edit (see the
-_[What happens during an update](#what-happens-during-an-update)_ section), so
-your changes survive that flow without manual intervention.
-
-By default, all SQL files (files with a `.sql` extension) in that directory
-will be processed during each startup in alphabetical order (after the world
-database has been created and updated with the latest migrations). Thus, the
-SQL statements in your files have to be idempotent (i.e., they can be processed
-multiple times without causing issues).
-
-You can find further details about this feature [here][compose-custom-sql].
-
-## Usage
-
-### Starting CMaNGOS
-
-Once you are happy with the configuration and have extracted the client data,
-you can start CMaNGOS for the first time. To do so, run:
+### 4. Start the server
 
 ```sh
 docker compose up -d
-```
-
-This pulls the Docker images first and afterwards automatically creates and
-starts the containers. During the first startup it might take a little longer
-until the server becomes available due to the initial database creation.
-
-> [!CAUTION]
-> Make sure to not (accidentally) stop CMaNGOS before the database creation
-> process has finished; otherwise, you will likely end up with a broken
-> database and will have to delete and re-create it.
-
-### Observing the CMaNGOS output
-
-Especially during the first startup you might want to follow the server output
-to know when CMaNGOS is up and running:
-
-```sh
 docker compose logs -f mangosd
 ```
 
-Once you see the output `World initialized.` you know that the initialization
-process has finished and CMaNGOS is ready.
+The first database import and initial PlayerBots setup can take a while. Do not
+stop the stack during the initial import. The world is ready when the log shows
+`CMANGOS: World initialized`.
 
-### Creating the first account
-
-To create the first account, attach to the `mangosd` container (make sure
-[that the server is ready](#observing-the-cmangos-output) before attaching):
+Create an account through the world-server console:
 
 ```sh
 docker compose attach mangosd
 ```
 
-After attaching, create the account and assign an account level:
+Then enter:
 
-```sh
-account create <account-name> <account-password>
-account set gmlevel <account-name> <account-level>
+```text
+account create <name> <password>
+account set gmlevel <name> 3
 ```
 
-The available account levels are:
+Level `3` is administrator; use `0` for a normal player account. Detach without
+stopping the server with <kbd>Ctrl</kbd>+<kbd>P</kbd>, then
+<kbd>Ctrl</kbd>+<kbd>Q</kbd>.
 
-| Level | Type          |
-| ----- | ------------- |
-| `0`   | Player        |
-| `1`   | Moderator     |
-| `2`   | Game Master   |
-| `3`   | Administrator |
+In the client's `realmlist.wtf`, use the same address configured above:
 
-E.g., to create an administrator account, set the account level to `3`.
-
-> [!NOTE]
-> Setting an account level of `1` or higher means that some Game
-> Master-specific behavior will begin to apply to characters on that account.
-> Exactly which behavior applies depends on the account level; you can modify
-> some of this via the [`GM.*` options][mangosd-gm-options] in your
-> `mangosd.conf`.
-
-For TBC and WotLK, expansion-specific content is gated by an "expansion level"
-that has to be set per account. New accounts default to level `0`, which
-corresponds to Classic. To unlock expansion content, run:
-
-```sh
-account set addon <account-name> <expansion-level>
+```text
+set realmlist <server-address>
 ```
 
-The available expansion levels are:
+## Network access
 
-| Expansion | Level | Effect                      |
-| --------- | ----- | --------------------------- |
-| Classic   | `0`   | Default; no action required |
-| TBC       | `1`   | Unlocks TBC content         |
-| WotLK     | `2`   | Unlocks WotLK content       |
+For Internet players, allow and forward these host ports to the server:
 
-When you are done, detach from the Docker container by pressing
-<kbd>Ctrl</kbd>+<kbd>P</kbd> and <kbd>Ctrl</kbd>+<kbd>Q</kbd>. You should now
-be able to log in to the game client with your newly created account.
+| Protocol | Port | Purpose |
+| -------- | ---: | ------- |
+| TCP | `3724` | Login server |
+| TCP | `8085` | World server |
 
-### Stopping CMaNGOS
+Do not expose MariaDB, phpMyAdmin, SOAP, or RA. The Compose `ports` entries
+publish ports on the host, but neither Docker nor CMaNGOS requests router
+mapping through UPnP, so router forwarding is not automatic even when UPnP is
+enabled. LAN-only and same-machine play require no router forwarding.
 
-To stop CMaNGOS, simply run:
+## Data, backups, and moving characters
 
-```sh
-docker compose down
-```
+| Data | Location |
+| ---- | -------- |
+| Accounts, characters, world state, and database metadata | Docker named volume `cmangos-database-classic` |
+| Original client files | `storage/classic/mangosd/client-data/` |
+| Extracted DBC/maps/vmaps/mmaps | `storage/classic/mangosd/extracted-data/` |
+| Server logs | `storage/classic/mangosd/logs/` and `storage/classic/realmd/logs/` |
+| Custom world SQL | `storage/classic/database/custom-sql/` |
+| Optional backup files | `storage/classic/database/backups/` |
 
-### Updating
+`docker compose down` preserves the named database volume. Do not use
+`docker compose down -v` unless you intend to delete every account and
+character.
 
-To update, pull the latest images:
-
-```sh
-docker compose pull
-```
-
-Afterwards, re-create the containers:
-
-```sh
-docker compose up -d
-```
-
-> [!NOTE]
-> Selecting specific images via combined revision tag (as described further
-> above) will obviously prevent you from updating until you edit each
-> respective service in your `compose.yaml` to pull newer images. Attempting to
-> update without changing the configured images is not harmful, it will just
-> not have any effect.
-
-#### What happens during an update
-
-cmangos-deploy detects upstream CMaNGOS commits that edit already released
-migration files. Such changes would otherwise leave your databases in an
-inconsistent state and require manual intervention to rectify.
-
-By default, cmangos-deploy will
-[automatically re-create your world database][compose-automatic-world-db-corrections]
-when a relevant change is detected. Anything in the world database that you may
-have changed (your custom NPCs and gameobjects, `npc_vendor` edits, etc.) does
-not survive the re-creation, so restore those from a backup if you need them
-back (or use
-[custom SQL](#modifying-the-world-database-with-custom-changes-optional) to
-cleanly preserve the additions/changes).
-
-For the other databases that contain user state, cmangos-deploy cannot safely
-re-create them and instead [halts startup][compose-halt-on-edits] until you
-intervene; see the next section.
-
-#### When cmangos-deploy asks you to apply changes manually
-
-When a migration edit is detected that affects a database containing user state
-(or a world database edit with automatic corrections disabled), cmangos-deploy
-halts startup and prints a message naming the affected database(s) and the
-GitHub link(s) to the upstream commit(s).
-
-The container stays running while paused; nothing restarts on its own. To
-resolve:
-
-1. Open each linked commit on GitHub and read the changes.
-2. Apply the equivalent SQL to the running database. From the host:
-   ```sh
-   docker compose exec database mariadb -u root -p <database>
-   ```
-   where `<database>` is `characters`, `realmd`, `logs`, or `mangos`. `mariadb`
-   will prompt for the password; it matches your `MARIADB_ROOT_PASSWORD`
-   setting in `compose.yaml`.
-3. When you are done, confirm by running on the host:
-   ```sh
-   docker compose exec database cmangos-confirm-changes
-   ```
-
-cmangos-deploy will then record the acknowledgement and continue startup. If
-you instead want to abort, run `docker compose down`.
-
-> [!CAUTION]
-> When you run `cmangos-confirm-changes`, cmangos-deploy treats the listed
-> commits as applied and continues. It does not check your database to verify
-> that the changes you made match what the commits describe. If your manual fix
-> is incorrect or incomplete, the database will be in an inconsistent state and
-> CMaNGOS may fail to start. The responsibility for matching what the commits
-> do is yours; cmangos-deploy provides no further support for resolving these
-> issues.
-
-#### Breaking changes
-
-It is recommended to regularly check this repository (either manually or by
-updating your local repository via `git pull`). Usually, the commits here will
-just consist of maintenance and potentially new CMaNGOS configuration options
-(that you may want to incorporate into your configuration).
-
-Sometimes, there may be new features or changes that require manual
-intervention. Such breaking changes will be listed here (and removed again once
-they become irrelevant), sorted by newest first:
-
-- __[2026-07-28] - The suggested database backup solution has changed__: the
-  example Compose configuration now uses
-  [`databack/mysql-backup`](https://github.com/databacker/mysql-backup) instead
-  of `tiredofit/db-backup`, whose repository has moved to a new organization
-  that announced a release for April 2026 which never happened, leaving it
-  unclear whether the project is still maintained. If you have the
-  `database-backup` service enabled, replace it with the
-  [updated service configuration][compose-database-backups]; none of the
-  environment variables carry over. Existing backups stay readable, but the new
-  service neither prunes nor restores them, so move or delete the old `.sql.gz`
-  files once you no longer need them. New backups are written as a single
-  `.tgz` archive per run that contains one `.sql` file per database.
-
-### Creating database backups
-
-It is recommended to perform regular database backups, particularly before
-updating.
-
-To automatically create database backups periodically, uncomment the
-[`database-backup` service configuration][compose-database-backups] in your
-`compose.yaml` and follow the comments for further information.
-
-Once the service is enabled, you can also create a backup on demand by running
-the following (clearing `DB_DUMP_CRON` is necessary because a schedule and a
-one-off run cannot be combined):
+To move players to another server using the same fork and database revisions,
+export both `realmd` and `characters`; character rows depend on account IDs in
+`realmd`.
 
 ```sh
-docker compose run --rm -e DB_DUMP_CRON= -e DB_DUMP_ONCE=true database-backup
+mkdir -p storage/classic/database/backups
+docker compose exec -T database sh -c \
+  'mariadb-dump -u root -p"$MARIADB_ROOT_PASSWORD" --databases realmd characters' \
+  > storage/classic/database/backups/players.sql
 ```
 
-#### Restoring a backup
-
-To restore a backup, first stop the `realmd` and `mangosd` services:
+On the destination, start its database once, copy `players.sql` into the
+repository, stop its game services, and restore:
 
 ```sh
 docker compose stop realmd mangosd
-```
-
-The restore drops and re-creates the tables in the affected databases, which
-would cause read and write errors in the running services and could leave the
-data in an unknown state. Then run the following, replacing the file name with
-the backup you want to restore:
-
-```sh
-docker compose run --rm database-backup restore --target /backup db_backup_<timestamp>.tgz
-```
-
-Finally, start the services again:
-
-```sh
+docker compose exec -T database sh -c \
+  'mariadb -u root -p"$MARIADB_ROOT_PASSWORD"' \
+  < storage/classic/database/backups/players.sql
 docker compose start realmd mangosd
 ```
 
-### Accessing the database
+Back up the destination first. Add the `mangos` database to the dump only if
+you also need manual world-database customizations; repeatable customizations
+belong in `storage/classic/database/custom-sql/` instead.
 
-To make certain changes (e.g., managing accounts or changing the realm
-configuration) it can be necessary to access the database with a MySQL/MariaDB
-client.
+## Routine commands
 
-A common web-based MySQL/MariaDB database administration tool called
-[phpMyAdmin][phpmyadmin] is included and can be enabled by uncommenting the
-[`phpmyadmin` service configuration][compose-phpmyadmin] in your
-`compose.yaml`. See the comments there for further information.
+```sh
+# Stop without deleting data
+docker compose down
 
-### Database security
+# Update this fork and rebuild the pinned custom images
+git pull
+docker compose build database realmd
+docker compose up -d
 
-It is not recommended to expose your database to the public (whether through
-direct port access, a WAN-accessible phpMyAdmin instance, or any other means).
-If you decide to do so, you will have to implement appropriate security
-measures. Please note that no further support or guidance regarding this will
-be provided here.
+# Validate the built image
+tests/validate-server-image.sh
+```
 
-> [!CAUTION]
-> The default database users with full access to all CMaNGOS data (`root` and
-> the user named via the `MARIADB_USER` environment variable) do not have any
-> restrictions in place in regards to which IPs/hosts can connect.
-
-## Maintainer
-
-[Michael Serajnik][maintainer]
-
-## Contribute
-
-You are welcome to help out!
-
-[Open an issue][issues] or [make a pull request][pull-requests].
-
-## Licenses
-
-- [`AGPL-3.0-or-later`][license-agpl-3.0-or-later] (Code)
-- [`CC-BY-SA-4.0`][license-cc-by-sa-4.0] (Documentation, graphic assets and
-  issue templates)
-- [`CC0-1.0`][license-cc0-1.0] (Configuration files)
-
-This project follows the [REUSE specification][reuse-spec].
-
-## Disclaimer
-
-cmangos-deploy is an independent, community-made Docker setup for the
-open-source [CMaNGOS][cmangos] project. It is not affiliated with, endorsed by,
-or sponsored by Blizzard Entertainment, Inc., and it is not an official CMaNGOS
-project.
-
-This project includes no game client data or other copyrighted game assets. You
-must supply your own legitimate game client, from which the required data is
-extracted locally on your own machine. It is intended for private,
-non-commercial use only and comes with no warranty.
-
-[badge-build-status]: https://github.com/mserajnik/cmangos-deploy/actions/workflows/build-docker-images.yaml/badge.svg
-[badge-build-status-url]: https://github.com/mserajnik/cmangos-deploy/actions/workflows/build-docker-images.yaml
-[badge-latest-build-date]: https://img.shields.io/endpoint?url=https%3A%2F%2Fscripts.mser.at%2Fcmangos-deploy-badges%2Fdate-badge.json
-[badge-latest-build-date-url]: https://github.com/mserajnik?tab=packages&repo_name=cmangos-deploy
-[badge-latest-classic-build]: https://img.shields.io/endpoint?url=https%3A%2F%2Fscripts.mser.at%2Fcmangos-deploy-badges%2Fclassic-build-badge.json
-[badge-latest-classic-build-url]: https://github.com/mserajnik/cmangos-deploy/pkgs/container/cmangos-server-classic
-[badge-latest-tbc-build]: https://img.shields.io/endpoint?url=https%3A%2F%2Fscripts.mser.at%2Fcmangos-deploy-badges%2Ftbc-build-badge.json
-[badge-latest-tbc-build-url]: https://github.com/mserajnik/cmangos-deploy/pkgs/container/cmangos-server-tbc
-[badge-latest-wotlk-build]: https://img.shields.io/endpoint?url=https%3A%2F%2Fscripts.mser.at%2Fcmangos-deploy-badges%2Fwotlk-build-badge.json
-[badge-latest-wotlk-build-url]: https://github.com/mserajnik/cmangos-deploy/pkgs/container/cmangos-server-wotlk
-[badge-lint-status]: https://github.com/mserajnik/cmangos-deploy/actions/workflows/lint.yaml/badge.svg
-[badge-lint-status-url]: https://github.com/mserajnik/cmangos-deploy/actions/workflows/lint.yaml
-[claude-code]: https://www.anthropic.com/product/claude-code
-[cmangos]: https://github.com/cmangos
-[codex]: https://openai.com/codex
-[compose-automatic-world-db-corrections]: https://github.com/mserajnik/cmangos-deploy/blob/master/compose-classic.yaml.example#L34-L46
-[compose-custom-sql]: https://github.com/mserajnik/cmangos-deploy/blob/master/compose-classic.yaml.example#L60-L77
-[compose-custom-sql-bind-mount]: https://github.com/mserajnik/cmangos-deploy/blob/master/compose-classic.yaml.example#L16
-[compose-database-backups]: https://github.com/mserajnik/cmangos-deploy/blob/master/compose-classic.yaml.example#L165-L202
-[compose-halt-on-edits]: https://github.com/mserajnik/cmangos-deploy/blob/master/compose-classic.yaml.example#L47-L59
-[compose-phpmyadmin]: https://github.com/mserajnik/cmangos-deploy/blob/master/compose-classic.yaml.example#L204-L224
-[docker]: https://docs.docker.com/get-docker/
-[docker-compose]: https://docs.docker.com/compose/install/
-[image-cmangos-packages]: https://github.com/mserajnik?tab=packages&repo_name=cmangos-deploy
-[issues]: https://github.com/mserajnik/cmangos-deploy/issues
-[license-agpl-3.0-or-later]: LICENSES/AGPL-3.0-or-later.txt
-[license-cc-by-sa-4.0]: LICENSES/CC-BY-SA-4.0.txt
-[license-cc0-1.0]: LICENSES/CC0-1.0.txt
-[maintainer]: https://github.com/mserajnik
-[mangosd-gm-options]: https://github.com/mserajnik/cmangos-deploy/blob/master/config/classic/mangosd.conf.example#L1180-L1295
-[phpmyadmin]: https://www.phpmyadmin.net/
-[playerbots]: https://github.com/cmangos/playerbots
-[pull-requests]: https://github.com/mserajnik/cmangos-deploy/pulls
-[reuse-spec]: https://reuse.software/spec/
-[tortoise-deploy]: https://github.com/mserajnik/tortoise-deploy
-[tortoise-wow]: https://github.com/Penqle/tortoise-wow
-[vmangos]: https://github.com/vmangos/core
-[vmangos-deploy]: https://github.com/mserajnik/vmangos-deploy
+Patch layout and source ownership are described in
+[`patches/README.md`](patches/README.md). Licensing remains as recorded in
+[`LICENSES/`](LICENSES).
