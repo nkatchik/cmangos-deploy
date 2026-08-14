@@ -114,6 +114,43 @@ It disables access and progression paths directly tied to the later raids, but
 does not attempt to purge every 1.9-1.12 item, spell, class change, or unrelated
 quest from the 1.12.1 database.
 
+### Instant honor progression
+
+Classic uses personal, permanent honor progression suited to a world populated
+by PlayerBots. Honor is added to the character immediately; weekly standings,
+brackets, rank distribution, decay, and the weekly cap are disabled. PlayerBots
+count as ordinary player opponents and receive no honor penalty.
+
+The supplied rates make outdoor PvP worth five times a Battleground kill or
+Battleground bonus before the normal `Rate.Honor` multiplier is applied:
+
+| Honor source | Rate |
+| ------------ | ---: |
+| Outdoor player or PlayerBot kill | `0.5` |
+| Battleground player or PlayerBot kill | `0.1` |
+| Battleground objective/bonus honor | `0.1` |
+
+Repeated kills of the same target on one server day award 100%, 75%, 50%, and
+25% of that source's value; the fifth and later kills award no honor. A
+different target starts at full value. This follows Blizzard's documented
+[original daily diminishing-return sequence](https://news.blizzard.com/en-us/article/23221132/wow-classic-world-bosses-and-pvp-honor-system-available).
+
+Rank 1 still requires 15 lifetime honorable kills. After that, the permanent
+rank-point thresholds are Rank 2 at 2,000, then 5,000-point steps through Rank
+14 at 60,000, with progress capped at 75,000. Those thresholds preserve the
+[original rank-point breakpoints](https://news.blizzard.com/en-us/article/23221132/wow-classic-world-bosses-and-pvp-honor-system-available)
+without the competitive weekly calculation. By default a dishonorable kill can
+remove progress within the current rank but cannot remove the highest rank
+already attained. Recent per-target kill records are retained for 14 days so
+daily diminishing returns survive restarts; older records are compacted into
+lifetime kill totals.
+
+The policy is controlled by `Custom.Honor.*` in
+[`config/classic/mangosd.conf.example`](config/classic/mangosd.conf.example).
+The supplied values are intentionally conservative starting points for bot-only
+PvP and should be adjusted only after the runtime matrix in
+[`tests/README.md`](tests/README.md) has been measured.
+
 ### Reproducible source and validation
 
 The Classic images build locally from pinned upstream revisions and apply the
@@ -150,6 +187,7 @@ and post-cutoff raid absence against the actual imported world database.
 
 - [Classic 1.8.4 five-character raid fork](#classic-184-five-character-raid-fork)
   - [Raid status and tuning](#raid-status-and-tuning)
+  - [Instant honor progression](#instant-honor-progression)
   - [Reproducible source and validation](#reproducible-source-and-validation)
 
 - [Install](#install)
