@@ -8,6 +8,10 @@ ConfVersion=2020072501
 # Enable or disable AI Playerbot
 AiPlayerbot.Enabled = 1
 
+# Cap the complete raid roster (human characters plus bots) at five. The
+# built-in five-character role template fills 1 tank, 1 healer, and 3 DPS.
+AiPlayerbot.CustomRaidTargetPlayers = 5
+
 # cmangos-deploy disables the random bot system by default to avoid
 # auto-spawning hundreds of bots. `AiPlayerbot.Enabled` above stays on so
 # players can still spawn bots on demand (e.g. via the `.bot` command).

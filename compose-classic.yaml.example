@@ -1,6 +1,14 @@
 services:
   database:
-    image: ghcr.io/mserajnik/cmangos-database-classic
+    image: cmangos-custom-database-classic:1.8.4-five-character
+    build:
+      context: .
+      dockerfile: docker/database/Dockerfile
+      args:
+        CMANGOS_EXPANSION: classic
+        CMANGOS_CORE_REVISION: 1b3795fcd824338938bb67a0be79cafd26231065
+        CMANGOS_DATABASE_REVISION: 250a705a462c1acb457d3002359c7e0052c4dafe
+        CMANGOS_PLAYERBOTS_REVISION: 21af55995bebd84bc3154730f0e69dc964e3753f
     restart: unless-stopped
     # The healthcheck reports whether the container is working as expected by
     # marking it `healthy` or `unhealthy`; note that Docker Compose does not
@@ -77,7 +85,14 @@ services:
       - CMANGOS_PROCESS_CUSTOM_SQL=1
 
   realmd:
-    image: ghcr.io/mserajnik/cmangos-server-classic
+    image: cmangos-custom-server-classic:1.8.4-five-character
+    build: &classic-server-build
+      context: .
+      dockerfile: docker/server/Dockerfile
+      args:
+        CMANGOS_EXPANSION: classic
+        CMANGOS_CORE_REVISION: 1b3795fcd824338938bb67a0be79cafd26231065
+        CMANGOS_PLAYERBOTS_REVISION: 21af55995bebd84bc3154730f0e69dc964e3753f
     # If you are using a Linux host and your user's UID and GID are not 1000,
     # change these values to reflect your user's UID and GID. This will cause
     # the user in the container to use the same UID and GID and prevent
@@ -107,7 +122,8 @@ services:
       - TZ=Etc/UTC # Change this to your desired time zone (usually you want to match your host system's time zone).
 
   mangosd:
-    image: ghcr.io/mserajnik/cmangos-server-classic
+    image: cmangos-custom-server-classic:1.8.4-five-character
+    build: *classic-server-build
     # If you are using a Linux host and your user's UID and GID are not 1000,
     # change these values to reflect your user's UID and GID. This will cause
     # the user in the container to use the same UID and GID and prevent
