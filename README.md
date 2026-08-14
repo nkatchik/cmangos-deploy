@@ -54,7 +54,103 @@ simplify managing a CMaNGOS setup:
 > latest images are rebuilt to ensure software and dependencies are up to date,
 > even if there have been no updates to CMaNGOS itself.
 
+## Classic 1.8.4 five-character raid fork
+
+This fork gives the Classic deployment a deliberate progression boundary at
+WoW patch **1.8.4 (2005-12-06)** and tunes the raids available at that date for
+a raid roster of at most five total characters, including PlayerBots. It still
+uses the CMaNGOS 1.12.1 client/core data model; it is a server-side content
+policy, not a recreation of the 1.8.4 client executable or every historical
+class/mechanics detail.
+
+- Content target: Vanilla WoW / CMaNGOS Classic
+- Raid-content cutoff: 1.8.4
+- Target raid size: 5 total characters
+- PlayerBots supported: yes
+
+The cutoff follows the original release sequence: Blackwing Lair arrived in
+[1.6.0](https://warcraft.wiki.gg/wiki/Patch_1.6.0), Zul'Gurub in
+[1.7.0](https://warcraft.wiki.gg/wiki/Patch_1.7.0), and the four Dragons of
+Nightmare in [1.8.0](https://warcraft.wiki.gg/wiki/Patch_1.8.0). Patch
+[1.8.4](https://warcraft.wiki.gg/wiki/Patch_1.8.4) was the last release before
+Ahn'Qiraj in [1.9.0](https://warcraft.wiki.gg/wiki/Patch_1.9.0) and Naxxramas in
+[1.11.0](https://warcraft.wiki.gg/wiki/Patch_1.11.0).
+
+### Raid status and tuning
+
+| Content | Policy | Five-character baseline | Encounter-specific changes and current limitations |
+| ------- | ------ | ----------------------- | -------------------------------------------------- |
+| Molten Core | Retained; maximum 5 characters | Creature health 20%, creature damage 55% | Ragnaros uses 24%/50%, summons 3 Sons of Flame; Majordomo keeps a mixed 2-elite/2-healer pack. Other multi-add encounters retain their original add counts and need playtesting. |
+| Onyxia's Lair | Retained; maximum 5 characters | Creature health 20%, creature damage 55% | Onyxia uses 24%/52%; the first whelp wave is 4 and later waves are 2-3. Positioning and fear handling remain required. |
+| Blackwing Lair | Retained; maximum 5 characters | Creature health 20%, creature damage 55% | Razorgore uses 25%/55% and needs 8 eggs; Nefarian uses 22%/52% and needs 10 phase-one drakonid kills. Suppression Room, Chromaggus dispels, and class calls still require a suitable composition and are the highest-risk tuning areas. |
+| Zul'Gurub | Retained; maximum 5 characters | Creature health 35%, creature damage 65% | Hakkar uses 36%/60%. PlayerBots have automatic generic Zul'Gurub strategy activation, but no encounter-specific ZG strategy package yet. |
+| Azuregos and Lord Kazzak | Retained | Creature health 20%, creature damage 55% | Outdoor contention, leash behavior, and terrain are unchanged. |
+| Ysondre, Lethon, Emeriss, and Taerar | Retained | Creature health 20%, creature damage 55% | Original dragon-specific mechanics and add patterns remain; these are supported by the scaler but still require encounter-by-encounter playtesting. |
+| Ruins of Ahn'Qiraj (AQ20) | Disabled (released in 1.9) | Not applicable | Instance template, entrances, spawns, war-effort state, and directly dependent quests are unavailable. |
+| Temple of Ahn'Qiraj (AQ40) | Disabled (released in 1.9) | Not applicable | Same enforcement as AQ20, including the Scepter and gong chain. |
+| Naxxramas | Disabled (released in 1.11) | Not applicable | Instance template, entrances, spawns, Scourge Invasion state, attunement, tier, crafting, and Atiesh quests are unavailable. |
+
+These multipliers are a maintainable starting calibration, not a claim that
+every retained encounter has completed live balance qualification. Generic
+scaling is data-driven in `custom_raid_scaling`: a map-default row controls the
+raid, while a `(map_id, creature_id)` row overrides an individual encounter.
+Health is applied when a creature's maximum health is built; creature-origin
+melee, spell, periodic, and scripted damage is adjusted at the central damage
+boundary. Player damage, healing, threat rules, timers, and spell selection are
+left intact so encounter identity is not replaced by a blanket difficulty
+mode.
+
+`Custom.RaidScaling.TargetPlayers` accepts 1-5. Multipliers and the explicit
+roster-bound mechanics scale proportionally from the five-character
+calibration. The supplied configuration uses five, for which PlayerBots'
+native role template is **1 tank, 1 healer, and 3 damage characters**. The
+`AiPlayerbot.CustomRaidTargetPlayers` guard applies to the complete group, so a
+human plus four bots is the normal roster. Convert the five-character party to
+a raid before entering; the normal CMaNGOS raid-group requirement remains on.
+Random-bot auto-spawning stays disabled by default.
+
+The cutoff deliberately preserves unrelated 1.8 Silithus and outdoor content.
+It disables access and progression paths directly tied to the later raids, but
+does not attempt to purge every 1.9-1.12 item, spell, class change, or unrelated
+quest from the 1.12.1 database.
+
+### Reproducible source and validation
+
+The Classic images build locally from pinned upstream revisions and apply the
+deployment-owned patches in [`patches/`](patches). A failed local patch aborts
+the image build. External patch repositories remain optional and have no
+hidden default.
+
+The patch layout keeps upstream ownership clear: `patches/classic/core`
+contains the data-driven scaler and encounter-script adjustments,
+`patches/classic/database` contains tuning plus cutoff enforcement, and
+`patches/classic/playerbots` contains group-size and raid-strategy changes.
+Conceptual changes are separate files and are applied in lexical order.
+
+| Source | Pinned revision |
+| ------ | --------------- |
+| `cmangos/mangos-classic` | `1b3795fcd824338938bb67a0be79cafd26231065` |
+| `cmangos/classic-db` | `250a705a462c1acb457d3002359c7e0052c4dafe` |
+| `cmangos/playerbots` | `21af55995bebd84bc3154730f0e69dc964e3753f` |
+
+Copy the Classic Compose example as usual, then build before the first start:
+
+```sh
+cp compose-classic.yaml.example compose.yaml
+docker compose build database realmd
+docker compose up -d
+```
+
+The source-level and live database gates are documented in
+[`tests/README.md`](tests/README.md). After the database becomes healthy, run
+`tests/validate-classic-world.sh` to verify both retained raid accessibility
+and post-cutoff raid absence against the actual imported world database.
+
 ## Table of contents
+
+- [Classic 1.8.4 five-character raid fork](#classic-184-five-character-raid-fork)
+  - [Raid status and tuning](#raid-status-and-tuning)
+  - [Reproducible source and validation](#reproducible-source-and-validation)
 
 - [Install](#install)
   - [Dependencies](#dependencies)
@@ -200,7 +296,7 @@ For TBC and WotLK, use `compose-tbc.yaml.example` or
 `compose-wotlk.yaml.example` instead. The three files share the same structure
 and only differ where the expansion makes them.
 
-The available images for each expansion are:
+The upstream prebuilt images for each expansion are:
 
 | Expansion          | Server image                               | Database image                               |
 | ------------------ | ------------------------------------------ | -------------------------------------------- |
@@ -208,8 +304,12 @@ The available images for each expansion are:
 | TBC (`2.4.3`)      | `ghcr.io/mserajnik/cmangos-server-tbc`     | `ghcr.io/mserajnik/cmangos-database-tbc`     |
 | WotLK (`3.3.5a`)   | `ghcr.io/mserajnik/cmangos-server-wotlk`   | `ghcr.io/mserajnik/cmangos-database-wotlk`   |
 
-By default, the latest available images are used. Alternatively, you can also
-select specific ones via their combined revision tag. Each image is tagged with
+The TBC and WotLK examples use the latest available upstream images. This
+fork's Classic example intentionally builds the pinned custom server and
+database images locally; replacing them with the upstream Classic images also
+removes the 1.8.4 cutoff and five-character raid implementation. For an
+unmodified deployment, you can alternatively select upstream images via their
+combined revision tag. Each image is tagged with
 a tag of the form
 `<expansion>-core.<core-revision>-db.<db-revision>-playerbots.<playerbots-revision>`,
 where each revision is a 7-character prefix of the matching commit hash. For
