@@ -1,0 +1,14 @@
+diff --git a/Updates/9999_custom_01_five_character_instance_caps.sql b/Updates/9999_custom_01_five_character_instance_caps.sql
+new file mode 100644
+index 00000000..83e334d1
+--- /dev/null
++++ b/Updates/9999_custom_01_five_character_instance_caps.sql
+@@ -0,0 +1,8 @@
++-- Every active Classic dungeon and retained raid is a five-character activity.
++-- Battleground and transport templates use maxPlayers=0 and are intentionally
++-- outside this policy. Post-1.8.4 raids have already been removed by the
++-- preceding cutoff migration.
++
++UPDATE `instance_template`
++SET `maxPlayers` = 5
++WHERE `maxPlayers` > 0;

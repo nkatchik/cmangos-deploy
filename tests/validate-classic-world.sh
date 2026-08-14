@@ -25,9 +25,14 @@ expect_equal() {
 }
 
 expect_equal \
-  "all four retained raids exist with a five-character cap" \
-  4 \
-  "SELECT COUNT(*) FROM instance_template WHERE map IN (249,309,409,469) AND maxPlayers=5;"
+  "all active dungeons and retained raids have a five-character cap" \
+  0 \
+  "SELECT COUNT(*) FROM instance_template WHERE maxPlayers > 0 AND maxPlayers <> 5;"
+
+expect_equal \
+  "Blackrock Spire is capped for one five-character group" \
+  1 \
+  "SELECT COUNT(*) FROM instance_template WHERE map=229 AND maxPlayers=5;"
 
 expect_equal \
   "all four retained raids still have an entrance" \

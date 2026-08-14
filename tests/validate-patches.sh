@@ -47,6 +47,7 @@ git -C "$work_dir/playerbots" diff --check
 test -f "$work_dir/core/src/game/Globals/CustomRaidScaling.cpp"
 test -f "$work_dir/database/Updates/9997_five_character_raid_scaling.sql"
 test -f "$work_dir/database/Updates/9998_disable_post_1_8_4_progression.sql"
+test -f "$work_dir/database/Updates/9999_custom_01_five_character_instance_caps.sql"
 test -f "$work_dir/database/Updates/Instances/999_disable_post_1_8_4_raids.sql"
 test -f "$work_dir/playerbots/playerbot/strategy/generic/ZulGurubDungeonStrategies.h"
 
