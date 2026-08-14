@@ -2,9 +2,9 @@
 
 This is a fork of
 [`mserajnik/cmangos-deploy`](https://github.com/mserajnik/cmangos-deploy) for a
-specific Classic server: raid progression stops at patch 1.8.4, retained raids
-are tuned for five total characters, PlayerBots are included, and honor uses
-immediate personal progression.
+specific Classic server: raid progression stops at patch 1.8.4, every active
+dungeon and retained raid targets five total characters, PlayerBots are
+included, and honor uses immediate personal progression.
 
 Only this fork's differences and the shortest supported startup path are
 documented here. For the base deployment's internals, optional services, and
@@ -23,11 +23,19 @@ No external patch repository is required.
 - Ruins of Ahn'Qiraj, Temple of Ahn'Qiraj, Naxxramas, their entrances and
   spawns, and directly dependent progression are disabled because they were
   released after 1.8.4.
-- Retained raid instances accept at most five total characters. A normal group
-  is one human and four bots, converted to a raid before entry.
+- Every active dungeon and retained raid accepts at most five total characters.
+  Native five-player dungeons keep their normal creature tuning; Upper
+  Blackrock Spire receives explicit five-player creature and event tuning
+  without weakening Lower Blackrock Spire.
+- A normal group is one human and four bots, converted to a raid when the
+  instance requires it.
 - The default PlayerBots role template is one tank, one healer, and three DPS.
-- Raid health and damage scaling is data-driven, with encounter overrides for
-  mechanics such as Onyxia's whelps, Ragnaros's sons, Razorgore's eggs, and
+- Raid-trash and boss health and damage budgets are independently data-driven
+  across every retained raid. The trash baseline targets a slow but feasible
+  isolated elite kill for a geared level-60 character; packs and bosses remain
+  five-character content.
+- Encounter overrides cover roster-bound mechanics such as Upper Blackrock
+  Spire's event waves, Onyxia's whelps, Ragnaros's sons, Razorgore's eggs, and
   Nefarian's phase-one kill count.
 
 The supplied tuning is a starting calibration, not a claim that every group

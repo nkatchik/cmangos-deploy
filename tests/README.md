@@ -24,9 +24,11 @@ cp compose-classic.yaml.example compose-classic.yaml
 tests/validate-classic-world.sh
 ```
 
-The live gate proves that the retained raids remain addressable, the three
-post-cutoff raids and their spawns are absent, the launch events are disabled,
-and every retained raid/world-boss family has a scaling policy.
+The live gate proves that every active finite-sized dungeon and retained raid
+has a five-character cap, the three post-cutoff raids and their spawns are
+absent, the launch events are disabled, every retained raid/world-boss family
+has a scaling policy, Lower Blackrock Spire keeps native tuning, and the Upper
+Blackrock Spire entries have explicit five-character tuning.
 
 A complete `mangosd` startup needs DBC, map, vmap, and mmap data extracted from
 a legally obtained 1.12.1 client. Once those files are mounted and the full
@@ -38,18 +40,27 @@ tests/validate-classic-runtime.sh
 
 ## Five-character encounter qualification
 
-Use one five-character raid for every run (normally one human plus four bots),
+Use one five-character group for every run (normally one human plus four bots),
 with one tank, one healer, and three damage roles unless the case says
 otherwise. For every representative encounter, record entry, pull, tank
 survival, healer mana, bot positioning and targets, add handling, mechanic
 execution, kill, loot, and lockout/progression state.
 
-| Raid | Representative gate | Specific observations |
-| ---- | ------------------- | --------------------- |
+| Instance | Representative gate | Specific observations |
+| -------- | ------------------- | --------------------- |
+| Upper Blackrock Spire | Emberseer, Rend, and Drakkisath | Confirm four active incarcerators, three active Stadium enemies per wave, four Flamewreath waves, boss/guard targeting, kill, loot, and saved instance. Also confirm a Lower Blackrock Spire run retains native creature strength. |
 | Onyxia's Lair | Onyxia | Confirm four first-wave whelps, two-to-three later whelps, ranged positioning during flight, fear recovery, kill, loot, and saved instance. |
 | Molten Core | Majordomo and Ragnaros | Confirm the mixed four-add Majordomo pack, crowd control/dispels, three Sons of Flame, submerge/emerge progression, loot, and lockout. |
 | Blackwing Lair | Razorgore and Nefarian | Confirm phase transition at eight eggs and ten drakonid kills, orb/add targeting, class-call handling, kill, loot, and instance progression. Separately exercise Suppression Room and Chromaggus dispels. |
 | Zul'Gurub | Renataki and Hakkar | Confirm Thousand Blades never targets more than three secondary players, automatic ZG strategy activation, poison handling, add targeting, kill, loot, and lockout. |
+
+For the solo calibration, use a geared level-60 character without bots and pull
+one representative elite at a time in Upper Blackrock Spire, Onyxia's Lair,
+Zul'Gurub, Molten Core, and Blackwing Lair. Record time to kill, incoming damage,
+consumables, cooldowns, and remaining health/resources. The target is a slow but
+repeatable isolated kill, not solo completion of a pack, event, or boss. Run a
+normal five-character clear as the companion check so the solo baseline does
+not make group progression trivial.
 
 Also run Azuregos, Lord Kazzak, and one Dragon of Nightmare in the open world.
 Check leash/terrain behavior, tank survival, healer mana, add handling, loot,

@@ -21,4 +21,14 @@ Classic-specific core patches are intentionally split by concern:
   mechanics;
 - `0102-instant-honor-progression.patch` replaces weekly competitive ranking
   with immediate personal progression, world/Battleground source rates, and
-  daily per-target diminishing returns.
+  daily per-target diminishing returns;
+- `0103-tiered-raid-creature-scaling.patch` gives raid trash and bosses
+  independent health and damage budgets;
+- `0104-five-character-blackrock-spire-mechanics.patch` reduces the fixed-size
+  Upper Blackrock Spire event waves for a five-character group.
+
+The Classic database patches are also split by concern. In particular,
+`0103-five-character-instance-caps.patch` caps every active finite-sized
+dungeon or raid at five, while `0104-tiered-raid-creature-tuning.patch` sets
+the retained-raid tiers and targets Upper Blackrock Spire entries explicitly
+so Lower Blackrock Spire stays at native tuning.
