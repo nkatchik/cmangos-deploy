@@ -1,0 +1,87 @@
+diff --git a/Updates/9999_custom_02_tiered_raid_tuning.sql b/Updates/9999_custom_02_tiered_raid_tuning.sql
+new file mode 100644
+index 00000000..fb835fc5
+--- /dev/null
++++ b/Updates/9999_custom_02_tiered_raid_tuning.sql
+@@ -0,0 +1,78 @@
++-- Keep raid bosses on a five-character encounter budget while making ordinary
++-- raid elites comparable to difficult dungeon elites. This lets a well-geared
++-- level-60 character defeat one isolated elite without making a full trash
++-- pack or a raid boss solo content.
++
++ALTER TABLE `custom_raid_scaling`
++  ADD COLUMN `boss_health_multiplier` float unsigned NOT NULL DEFAULT '1' AFTER `damage_multiplier`,
++  ADD COLUMN `boss_damage_multiplier` float unsigned NOT NULL DEFAULT '1' AFTER `boss_health_multiplier`;
++
++-- Existing creature-specific overrides are boss/encounter overrides. Preserve
++-- their values before assigning distinct map-level trash and boss budgets.
++UPDATE `custom_raid_scaling`
++SET `boss_health_multiplier` = `health_multiplier`,
++    `boss_damage_multiplier` = `damage_multiplier`;
++
++UPDATE `custom_raid_scaling`
++SET `health_multiplier` = 0.12,
++    `damage_multiplier` = 0.40,
++    `boss_health_multiplier` = 0.20,
++    `boss_damage_multiplier` = 0.55,
++    `comment` = 'Onyxia raid trash and boss defaults'
++WHERE `map_id` = 249 AND `creature_id` = 0;
++
++UPDATE `custom_raid_scaling`
++SET `health_multiplier` = 0.22,
++    `damage_multiplier` = 0.45,
++    `boss_health_multiplier` = 0.35,
++    `boss_damage_multiplier` = 0.65,
++    `comment` = 'Zul''Gurub raid trash and boss defaults'
++WHERE `map_id` = 309 AND `creature_id` = 0;
++
++UPDATE `custom_raid_scaling`
++SET `health_multiplier` = 0.12,
++    `damage_multiplier` = 0.40,
++    `boss_health_multiplier` = 0.20,
++    `boss_damage_multiplier` = 0.55,
++    `comment` = 'Molten Core raid trash and boss defaults'
++WHERE `map_id` = 409 AND `creature_id` = 0;
++
++UPDATE `custom_raid_scaling`
++SET `health_multiplier` = 0.12,
++    `damage_multiplier` = 0.40,
++    `boss_health_multiplier` = 0.20,
++    `boss_damage_multiplier` = 0.55,
++    `comment` = 'Blackwing Lair raid trash and boss defaults'
++WHERE `map_id` = 469 AND `creature_id` = 0;
++
++-- Blackrock Spire contains both LBRS (native five-player tuning) and UBRS
++-- (larger-roster tuning) on map 229. The neutral map row enables five-player
++-- mechanic counts without weakening LBRS; only UBRS creatures are scaled.
++INSERT INTO `custom_raid_scaling`
++  (`map_id`, `creature_id`, `calibration_players`, `health_multiplier`, `damage_multiplier`,
++   `boss_health_multiplier`, `boss_damage_multiplier`, `comment`)
++VALUES
++  (229,     0, 5, 1.00, 1.00, 1.00, 1.00, 'Blackrock Spire map default; LBRS remains native'),
++  (229,  9816, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Pyroguard Emberseer'),
++  (229,  9817, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Blackhand Dreadweaver'),
++  (229,  9818, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Blackhand Summoner'),
++  (229,  9819, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Blackhand Veteran'),
++  (229, 10083, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Rage Talon Flamescale'),
++  (229, 10258, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Rookery Guardian'),
++  (229, 10264, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Solakar Flamewreath'),
++  (229, 10316, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Blackhand Incarcerator'),
++  (229, 10317, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Blackhand Elite'),
++  (229, 10318, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Blackhand Assassin'),
++  (229, 10319, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Blackhand Iron Guard'),
++  (229, 10339, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Gyth'),
++  (229, 10363, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS General Drakkisath'),
++  (229, 10366, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Rage Talon Dragon Guard'),
++  (229, 10371, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Rage Talon Captain'),
++  (229, 10372, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Rage Talon Fire Tongue'),
++  (229, 10429, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Rend Blackhand'),
++  (229, 10430, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS The Beast'),
++  (229, 10442, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Chromatic Whelp'),
++  (229, 10447, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Chromatic Dragon'),
++  (229, 10509, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Jed Runewatcher'),
++  (229, 10683, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Rookery Hatcher'),
++  (229, 10742, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Blackhand Handler'),
++  (229, 10762, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Blackhand Thug'),
++  (229, 10814, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Chromatic Elite Guard'),
++  (229, 10899, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Goraluk Anvilcrack');

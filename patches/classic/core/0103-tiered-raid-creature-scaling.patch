@@ -1,0 +1,106 @@
+diff --git a/src/game/Entities/Creature.cpp b/src/game/Entities/Creature.cpp
+index 0fbdcdc88..58a90d0ab 100644
+--- a/src/game/Entities/Creature.cpp
++++ b/src/game/Entities/Creature.cpp
+@@ -1418,7 +1418,7 @@ void Creature::SelectLevel(uint32 forcedLevel /*= USE_DEFAULT_DATABASE_LEVEL*/)
+     health *= _GetHealthMod(rank); // Apply custom config setting
+     // Player pets and guardians must keep their normal health contribution.
+     if (!IsPet() && !IsPlayerControlled() && !GetOwnerGuid().IsPlayer())
+-        health *= sCustomRaidScalingMgr.GetHealthMultiplier(GetMapId(), GetEntry());
++        health *= sCustomRaidScalingMgr.GetHealthMultiplier(GetMapId(), GetEntry(), rank == CREATURE_ELITE_WORLDBOSS);
+     if (health < 1)
+         health = 1;
+ 
+diff --git a/src/game/Entities/Unit.cpp b/src/game/Entities/Unit.cpp
+index 5a1b78e72..47ea7a0db 100644
+--- a/src/game/Entities/Unit.cpp
++++ b/src/game/Entities/Unit.cpp
+@@ -906,6 +906,7 @@ uint32 Unit::DealDamage(Unit* dealer, Unit* victim, uint32 damage, CleanDamage co
+             !dealer->IsPlayerControlled() && !dealer->GetOwnerGuid().IsPlayer() && damagetype != INSTAKILL)
+     {
+-        float multiplier = sCustomRaidScalingMgr.GetDamageMultiplier(dealer->GetMapId(), dealer->GetEntry());
++        Creature const* creatureDealer = static_cast<Creature const*>(dealer);
++        float multiplier = sCustomRaidScalingMgr.GetDamageMultiplier(dealer->GetMapId(), dealer->GetEntry(), creatureDealer->IsWorldBoss());
+         damage = std::max(uint32(1), uint32(damage * multiplier));
+     }
+ 
+diff --git a/src/game/Globals/CustomRaidScaling.cpp b/src/game/Globals/CustomRaidScaling.cpp
+index 32c660441..ae2343ceb 100644
+--- a/src/game/Globals/CustomRaidScaling.cpp
++++ b/src/game/Globals/CustomRaidScaling.cpp
+@@ -37,7 +37,8 @@ void CustomRaidScalingMgr::Load()
+     }
+ 
+     std::unique_ptr<QueryResult> result(WorldDatabase.Query(
+-        "SELECT map_id, creature_id, calibration_players, health_multiplier, damage_multiplier "
++        "SELECT map_id, creature_id, calibration_players, health_multiplier, damage_multiplier, "
++        "boss_health_multiplier, boss_damage_multiplier "
+         "FROM custom_raid_scaling"));
+ 
+     if (!result)
+@@ -59,8 +60,11 @@ void CustomRaidScalingMgr::Load()
+         data.calibrationPlayers = fields[2].GetUInt32();
+         data.healthMultiplier = fields[3].GetFloat();
+         data.damageMultiplier = fields[4].GetFloat();
++        data.bossHealthMultiplier = fields[5].GetFloat();
++        data.bossDamageMultiplier = fields[6].GetFloat();
+ 
+-        if (!data.calibrationPlayers || data.healthMultiplier <= 0.0f || data.damageMultiplier <= 0.0f)
++        if (!data.calibrationPlayers || data.healthMultiplier <= 0.0f || data.damageMultiplier <= 0.0f ||
++                data.bossHealthMultiplier <= 0.0f || data.bossDamageMultiplier <= 0.0f)
+         {
+             sLog.outErrorDb(
+                 "Invalid custom raid scaling row for map %u and creature %u; all multipliers and calibration_players must be positive",
+@@ -94,16 +98,24 @@ float CustomRaidScalingMgr::AdjustForTargetPlayers(float multiplier, uint32 cali
+     return std::min(1.0f, multiplier * targetPlayers / float(calibrationPlayers));
+ }
+ 
+-float CustomRaidScalingMgr::GetHealthMultiplier(uint32 mapId, uint32 creatureEntry) const
++float CustomRaidScalingMgr::GetHealthMultiplier(uint32 mapId, uint32 creatureEntry, bool worldBoss) const
+ {
+     CustomRaidScalingData const* data = Find(mapId, creatureEntry);
+-    return data ? AdjustForTargetPlayers(data->healthMultiplier, data->calibrationPlayers) : 1.0f;
++    if (!data)
++        return 1.0f;
++
++    float multiplier = worldBoss ? data->bossHealthMultiplier : data->healthMultiplier;
++    return AdjustForTargetPlayers(multiplier, data->calibrationPlayers);
+ }
+ 
+-float CustomRaidScalingMgr::GetDamageMultiplier(uint32 mapId, uint32 creatureEntry) const
++float CustomRaidScalingMgr::GetDamageMultiplier(uint32 mapId, uint32 creatureEntry, bool worldBoss) const
+ {
+     CustomRaidScalingData const* data = Find(mapId, creatureEntry);
+-    return data ? AdjustForTargetPlayers(data->damageMultiplier, data->calibrationPlayers) : 1.0f;
++    if (!data)
++        return 1.0f;
++
++    float multiplier = worldBoss ? data->bossDamageMultiplier : data->damageMultiplier;
++    return AdjustForTargetPlayers(multiplier, data->calibrationPlayers);
+ }
+ 
+ uint32 CustomRaidScalingMgr::GetMaxPlayers(uint32 mapId, uint32 configuredMaximum) const
+diff --git a/src/game/Globals/CustomRaidScaling.h b/src/game/Globals/CustomRaidScaling.h
+index 3f8286ed3..b052216d0 100644
+--- a/src/game/Globals/CustomRaidScaling.h
++++ b/src/game/Globals/CustomRaidScaling.h
+@@ -19,6 +19,8 @@ struct CustomRaidScalingData
+     uint32 calibrationPlayers = 5;
+     float healthMultiplier = 1.0f;
+     float damageMultiplier = 1.0f;
++    float bossHealthMultiplier = 1.0f;
++    float bossDamageMultiplier = 1.0f;
+ };
+ 
+ class CustomRaidScalingMgr
+@@ -27,8 +29,8 @@ class CustomRaidScalingMgr
+         static CustomRaidScalingMgr& Instance();
+ 
+         void Load();
+-        float GetHealthMultiplier(uint32 mapId, uint32 creatureEntry) const;
+-        float GetDamageMultiplier(uint32 mapId, uint32 creatureEntry) const;
++        float GetHealthMultiplier(uint32 mapId, uint32 creatureEntry, bool worldBoss) const;
++        float GetDamageMultiplier(uint32 mapId, uint32 creatureEntry, bool worldBoss) const;
+         uint32 GetMaxPlayers(uint32 mapId, uint32 configuredMaximum) const;
+         uint32 GetMechanicCount(uint32 mapId, uint32 originalCount, uint32 fivePlayerCount) const;
+ 

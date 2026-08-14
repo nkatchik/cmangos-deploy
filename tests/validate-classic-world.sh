@@ -65,6 +65,26 @@ expect_equal \
   "SELECT COUNT(*) FROM custom_raid_scaling WHERE map_id IN (249,309,409,469) AND creature_id=0 AND calibration_players=5;"
 
 expect_equal \
+  "retained raid trash uses isolated-elite calibration" \
+  4 \
+  "SELECT COUNT(*) FROM custom_raid_scaling WHERE creature_id=0 AND ((map_id IN (249,409,469) AND health_multiplier<=0.12 AND damage_multiplier<=0.40) OR (map_id=309 AND health_multiplier<=0.22 AND damage_multiplier<=0.45));"
+
+expect_equal \
+  "retained raid bosses keep a stronger five-character budget than trash" \
+  4 \
+  "SELECT COUNT(*) FROM custom_raid_scaling WHERE map_id IN (249,309,409,469) AND creature_id=0 AND boss_health_multiplier>health_multiplier AND boss_damage_multiplier>damage_multiplier;"
+
+expect_equal \
+  "LBRS keeps native creature stats while enabling Blackrock Spire mechanics" \
+  1 \
+  "SELECT COUNT(*) FROM custom_raid_scaling WHERE map_id=229 AND creature_id=0 AND health_multiplier=1 AND damage_multiplier=1;"
+
+expect_equal \
+  "UBRS creatures have explicit five-character scaling" \
+  26 \
+  "SELECT COUNT(*) FROM custom_raid_scaling WHERE map_id=229 AND creature_id<>0 AND calibration_players=5 AND health_multiplier=0.55 AND damage_multiplier=0.70;"
+
+expect_equal \
   "pre-cutoff world bosses are configured for scaling" \
   10 \
   "SELECT COUNT(*) FROM custom_raid_scaling WHERE (map_id=0 AND creature_id=12397) OR (map_id=1 AND creature_id=6109) OR (map_id IN (0,1) AND creature_id IN (14887,14888,14889,14890));"
