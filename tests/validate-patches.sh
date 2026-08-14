@@ -53,5 +53,7 @@ test -f "$work_dir/playerbots/playerbot/strategy/generic/ZulGurubDungeonStrategi
 rg -q 'Custom\.RaidScaling\.TargetPlayers' "$work_dir/core/src/mangosd/mangosd.conf.dist.in"
 rg -q 'WHERE `map` IN \(509, 531, 533\)' "$work_dir/database/Updates/9998_disable_post_1_8_4_progression.sql"
 rg -q 'customRaidTargetPlayers' "$work_dir/playerbots/playerbot/strategy/actions/InviteToGroupAction.cpp"
+"$repo_root/tests/validate-honor-policy.sh" "$work_dir/core"
+rg -Fq 'Custom.Honor.InstantProgression.Enabled = 1' "$repo_root/config/classic/mangosd.conf.example"
 
 echo "Pinned Classic core, database, and PlayerBots patches apply cleanly."
