@@ -1,0 +1,93 @@
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackrock_spire/blackrock_spire.h b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackrock_spire/blackrock_spire.h
+index 56d247c92..7ff9bb718 100755
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackrock_spire/blackrock_spire.h
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackrock_spire/blackrock_spire.h
+@@ -138,13 +138,13 @@ static const Position aSpectatorsTargetLocs[12] =
+ // Stadium event description
+ static const uint32 aStadiumEventNpcs[MAX_STADIUM_WAVES][5] =
+ {
+-    {NPC_CHROMATIC_WHELP, NPC_CHROMATIC_WHELP, NPC_CHROMATIC_WHELP, NPC_CHROMATIC_DRAGON, 0},
+-    {NPC_CHROMATIC_WHELP, NPC_CHROMATIC_WHELP, NPC_CHROMATIC_WHELP, NPC_CHROMATIC_DRAGON, 0},
+-    {NPC_CHROMATIC_WHELP, NPC_CHROMATIC_WHELP, NPC_CHROMATIC_DRAGON, NPC_BLACKHAND_HANDLER, 0},
+-    {NPC_CHROMATIC_WHELP, NPC_CHROMATIC_WHELP, NPC_CHROMATIC_DRAGON, NPC_BLACKHAND_HANDLER, 0},
+-    {NPC_CHROMATIC_WHELP, NPC_CHROMATIC_WHELP, NPC_CHROMATIC_WHELP, NPC_CHROMATIC_DRAGON, NPC_BLACKHAND_HANDLER},
+-    {NPC_CHROMATIC_WHELP, NPC_CHROMATIC_WHELP, NPC_CHROMATIC_DRAGON, NPC_CHROMATIC_DRAGON, NPC_BLACKHAND_HANDLER},
+-    {NPC_CHROMATIC_WHELP, NPC_CHROMATIC_WHELP, NPC_CHROMATIC_DRAGON, NPC_CHROMATIC_DRAGON, NPC_BLACKHAND_HANDLER},
++    {NPC_CHROMATIC_WHELP, NPC_CHROMATIC_DRAGON, NPC_CHROMATIC_WHELP, NPC_CHROMATIC_WHELP, 0},
++    {NPC_CHROMATIC_WHELP, NPC_CHROMATIC_DRAGON, NPC_CHROMATIC_WHELP, NPC_CHROMATIC_WHELP, 0},
++    {NPC_CHROMATIC_WHELP, NPC_CHROMATIC_DRAGON, NPC_BLACKHAND_HANDLER, NPC_CHROMATIC_WHELP, 0},
++    {NPC_CHROMATIC_WHELP, NPC_CHROMATIC_DRAGON, NPC_BLACKHAND_HANDLER, NPC_CHROMATIC_WHELP, 0},
++    {NPC_CHROMATIC_WHELP, NPC_CHROMATIC_DRAGON, NPC_BLACKHAND_HANDLER, NPC_CHROMATIC_WHELP, NPC_CHROMATIC_WHELP},
++    {NPC_CHROMATIC_WHELP, NPC_CHROMATIC_DRAGON, NPC_BLACKHAND_HANDLER, NPC_CHROMATIC_WHELP, NPC_CHROMATIC_DRAGON},
++    {NPC_CHROMATIC_WHELP, NPC_CHROMATIC_DRAGON, NPC_BLACKHAND_HANDLER, NPC_CHROMATIC_WHELP, NPC_CHROMATIC_DRAGON},
+ };
+ 
+ class instance_blackrock_spire : public ScriptedInstance, private DialogueHelper
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackrock_spire/instance_blackrock_spire.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackrock_spire/instance_blackrock_spire.cpp
+index bb193611f..18a9e78d3 100755
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackrock_spire/instance_blackrock_spire.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackrock_spire/instance_blackrock_spire.cpp
+@@ -24,6 +24,7 @@ EndScriptData
+ */
+ 
+ #include "AI/ScriptDevAI/include/sc_common.h"
++#include "Globals/CustomRaidScaling.h"
+ #include "blackrock_spire.h"
+ 
+ enum
+@@ -526,8 +527,12 @@ void instance_blackrock_spire::DoProcessEmberseerEvent()
+     }
+ 
+     // remove the incarcerators flags and stop casting
++    uint32 activeIncarcerators = sCustomRaidScalingMgr.GetMechanicCount(instance->GetId(), uint32(m_lIncarceratorGUIDList.size()), 4);
++    uint32 activated = 0;
+     for (GuidList::const_iterator itr = m_lIncarceratorGUIDList.begin(); itr != m_lIncarceratorGUIDList.end(); ++itr)
+     {
++        if (activated >= activeIncarcerators)
++            break;
+         if (Creature* pCreature = instance->GetCreature(*itr))
+         {
+             if (pCreature->IsAlive())
+@@ -536,6 +541,7 @@ void instance_blackrock_spire::DoProcessEmberseerEvent()
+                 pCreature->InterruptNonMeleeSpells(false);
+                 pCreature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_NPC);
+                 pCreature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PLAYER);
++                ++activated;
+             }
+         }
+     }
+@@ -620,7 +626,8 @@ void instance_blackrock_spire::DoSendNextStadiumWave()
+         if (Creature* pNefarius = GetSingleCreatureFromStorage(NPC_LORD_VICTOR_NEFARIUS))
+         {
+             float fX, fY, fZ;
+-            for (uint8 i = 0; i < MAX_STADIUM_MOBS_PER_WAVE; ++i)
++            uint32 waveMobCount = sCustomRaidScalingMgr.GetMechanicCount(instance->GetId(), MAX_STADIUM_MOBS_PER_WAVE, 3);
++            for (uint8 i = 0; i < waveMobCount; ++i)
+             {
+                 if (aStadiumEventNpcs[m_uiStadiumWaves][i] == 0)
+                     continue;
+@@ -680,7 +687,8 @@ void instance_blackrock_spire::DoSendNextFlamewreathWave()
+ 
+     // TODO - The npcs would move nicer if they had DB waypoints, so i suggest to change their default movement to DB waypoints, and random movement when they reached their goal
+ 
+-    if (m_uiFlamewreathWaveCount < 6)                       // Send two adds (6 waves, then boss)
++    uint32 maxWaves = sCustomRaidScalingMgr.GetMechanicCount(instance->GetId(), 6, 4);
++    if (m_uiFlamewreathWaveCount < maxWaves)                // Send two adds, then boss
+     {
+         Creature* pSummoned = nullptr;
+         for (uint8 i = 0; i < 2; ++i)
+@@ -699,11 +707,9 @@ void instance_blackrock_spire::DoSendNextFlamewreathWave()
+         if (pSummoned && m_uiFlamewreathWaveCount == 0)
+             DoScriptText(SAY_ROOKERY_EVENT_START, pSummoned);
+ 
+-        if (m_uiFlamewreathWaveCount < 4)
++        if (m_uiFlamewreathWaveCount + 2 < maxWaves)
+             m_uiFlamewreathEventTimer = 30000;
+-        else if (m_uiFlamewreathWaveCount < 6)
+-            m_uiFlamewreathEventTimer = 40000;
+         else
+-            m_uiFlamewreathEventTimer = 10000;
++            m_uiFlamewreathEventTimer = 40000;
+ 
+         ++m_uiFlamewreathWaveCount;
+     }

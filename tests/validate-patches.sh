@@ -55,6 +55,7 @@ test -f "$work_dir/playerbots/playerbot/strategy/generic/ZulGurubDungeonStrategi
 rg -q 'Custom\.RaidScaling\.TargetPlayers' "$work_dir/core/src/mangosd/mangosd.conf.dist.in"
 rg -q 'boss_health_multiplier, boss_damage_multiplier' "$work_dir/core/src/game/Globals/CustomRaidScaling.cpp"
 rg -q 'creatureDealer->IsWorldBoss' "$work_dir/core/src/game/Entities/Unit.cpp"
+rg -Fq 'GetMechanicCount(instance->GetId(), MAX_STADIUM_MOBS_PER_WAVE, 3)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackrock_spire/instance_blackrock_spire.cpp"
 rg -q 'WHERE `map` IN \(509, 531, 533\)' "$work_dir/database/Updates/9998_disable_post_1_8_4_progression.sql"
 rg -q 'customRaidTargetPlayers' "$work_dir/playerbots/playerbot/strategy/actions/InviteToGroupAction.cpp"
 "$repo_root/tests/validate-honor-policy.sh" "$work_dir/core"
