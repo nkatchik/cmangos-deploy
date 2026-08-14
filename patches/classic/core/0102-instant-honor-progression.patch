@@ -1,0 +1,416 @@
+diff --git a/src/game/Entities/Player.cpp b/src/game/Entities/Player.cpp
+index 4d8e9160a1b76fcb30102e80564ad1baa9bd24d6..f5f31de24fc6c8496bcbb67191419e0222efdf41 100644
+--- a/src/game/Entities/Player.cpp
++++ b/src/game/Entities/Player.cpp
+@@ -90,6 +90,17 @@
+ #define SKILL_PERM_BONUS(x)    int16(PAIR32_HIPART(x))
+ #define MAKE_SKILL_BONUS(t, p) MAKE_PAIR32(t,p)
+ 
++static float GetHonorRankFloor(uint8 visualRank)
++{
++    if (visualRank == 0)
++        return 0.0f;
++    if (visualRank == 1)
++        return 1.0f;
++    if (visualRank == 2)
++        return 2000.0f;
++    return float(visualRank - 2) * 5000.0f;
++}
++
+ #ifdef BUILD_DEPRECATED_PLAYERBOT
+ extern Config botConfig;
+ #endif
+@@ -6521,20 +6532,25 @@ void Player::UpdateHonor()
+         }
+     }
+ 
+-    // STANDING
+-    SetHonorLastWeekStandingPos(sObjectMgr.GetHonorStandingPositionByGUID(GetGUIDLow(), GetTeam()));
+-
+-    // RANK POINTS
+-    std::optional<HonorStanding> standing = sObjectMgr.GetHonorStandingByGUID(GetGUIDLow(), GetTeam());
+     float rankP = GetStoredHonor();
+-    if (standing)
+-        rankP += standing->rpEarning;
++    if (sWorld.getConfig(CONFIG_BOOL_CUSTOM_HONOR_INSTANT_PROGRESSION_ENABLED))
++        SetHonorLastWeekStandingPos(0);
++    else
++    {
++        SetHonorLastWeekStandingPos(sObjectMgr.GetHonorStandingPositionByGUID(GetGUIDLow(), GetTeam()));
++        std::optional<HonorStanding> standing = sObjectMgr.GetHonorStandingByGUID(GetGUIDLow(), GetTeam());
++        if (standing)
++            rankP += standing->rpEarning;
++    }
+ 
+     SetRankPoints(rankP);
+ 
+-    // RIGHEST RANK
++    // HIGHEST RANK
+     // If the new rank is highest then the old one, then m_highest_rank is updated
+     HonorRankInfo prk =  MaNGOS::Honor::CalculateHonorRank(GetRankPoints());
++    if (sWorld.getConfig(CONFIG_BOOL_CUSTOM_HONOR_INSTANT_PROGRESSION_ENABLED) &&
++            total_honorableKills < sWorld.getConfig(CONFIG_UINT32_MIN_HONOR_KILLS))
++        MaNGOS::Honor::InitRankInfo(prk);
+     SetHonorRankInfo(prk);
+     if (prk.visualRank > 0 && prk.visualRank > GetHonorHighestRankInfo().visualRank)
+         SetHonorHighestRankInfo(prk);
+@@ -6592,6 +6608,30 @@ void Player::ClearHonorInfo()
+     MaNGOS::Honor::InitRankInfo(m_highest_rank);
+ }
+ 
++void Player::CompactHonorHistory(uint32 beforeDate)
++{
++    for (HonorCPMap::iterator itr = m_honorCP.begin(); itr != m_honorCP.end();)
++    {
++        if (itr->date >= beforeDate)
++        {
++            ++itr;
++            continue;
++        }
++
++        if (itr->isKill)
++        {
++            if (itr->type == HONORABLE)
++                ++m_stored_honorableKills;
++            else if (itr->type == DISHONORABLE)
++                ++m_stored_dishonorableKills;
++        }
++
++        itr = m_honorCP.erase(itr);
++    }
++
++    UpdateHonor();
++}
++
+ // How many times Player kill pVictim... ( toDate shouldn't be > lastWeekBegin )
+ uint32 Player::CalculateTotalKills(Unit* Victim, uint32 fromDate, uint32 toDate) const
+ {
+@@ -6675,6 +6715,28 @@ bool Player::AddHonorCP(float honor, uint8 type, Unit* victim)
+     if (!honor)
+         return false;
+ 
++    if (sWorld.getConfig(CONFIG_BOOL_CUSTOM_HONOR_INSTANT_PROGRESSION_ENABLED) && type == HONORABLE)
++    {
++        float sourceRate = 1.0f;
++        if (victim && victim->GetTypeId() == TYPEID_PLAYER)
++        {
++            sourceRate = InBattleGround()
++                ? sWorld.getConfig(CONFIG_FLOAT_CUSTOM_HONOR_BATTLEGROUND_KILL_RATE)
++                : sWorld.getConfig(CONFIG_FLOAT_CUSTOM_HONOR_WORLD_PVP_KILL_RATE);
++        }
++        else if (!victim && InBattleGround())
++            sourceRate = sWorld.getConfig(CONFIG_FLOAT_CUSTOM_HONOR_BATTLEGROUND_BONUS_RATE);
++
++        honor *= sourceRate * sWorld.getConfig(CONFIG_FLOAT_RATE_HONOR);
++        if (honor <= 0.0f)
++            return false;
++
++        float rankPoints = std::min(
++            GetStoredHonor() + honor,
++            float(sWorld.getConfig(CONFIG_UINT32_MAX_HONOR_POINTS)));
++        SetStoredHonor(rankPoints);
++    }
++
+     // If not victim, then give yourself
+     if (!victim)
+         victim = this;
+@@ -6695,6 +6757,9 @@ bool Player::AddHonorCP(float honor, uint8 type, Unit* victim)
+         // DK penalties are subtracted from your RP score immediately
+         // and are not included in weekly adjustment
+         float RP = GetRankPoints() > CP.honorPoints ? GetRankPoints() - CP.honorPoints : 0; // remove this check to have negative ranks
++        if (sWorld.getConfig(CONFIG_BOOL_CUSTOM_HONOR_INSTANT_PROGRESSION_ENABLED) &&
++                !sWorld.getConfig(CONFIG_BOOL_CUSTOM_HONOR_DISHONORABLE_KILLS_CAN_DEMOTE))
++            RP = std::max(RP, GetHonorRankFloor(GetHonorHighestRankInfo().visualRank));
+         SetStoredHonor(RP);
+     }
+ 
+diff --git a/src/game/Entities/Player.h b/src/game/Entities/Player.h
+index 010b0034f05e7189d0a9dff4d5cd76485d02145b..250f6abd80ce5503630730ff0b7809bf8182f9bb 100644
+--- a/src/game/Entities/Player.h
++++ b/src/game/Entities/Player.h
+@@ -1773,6 +1773,7 @@ class Player : public Unit
+         void UpdateHonor();
+         void ResetHonor();
+         void ClearHonorInfo();
++        void CompactHonorHistory(uint32 beforeDate);
+         bool RewardHonor(Unit* pVictim, uint32 groupsize);
+         // Assume only Players and Units as kills
+         // TYPEID_OBJECT used for CP from BG,quests etc.
+diff --git a/src/game/Globals/ObjectMgr.cpp b/src/game/Globals/ObjectMgr.cpp
+index 9722c57be4f3739c16bd3ffc67f779f8859df1e5..adba9b97a8c2f7f1598e59d7aa1c84bae4d7416c 100644
+--- a/src/game/Globals/ObjectMgr.cpp
++++ b/src/game/Globals/ObjectMgr.cpp
+@@ -3854,6 +3854,43 @@ void ObjectMgr::FlushRankPoints(uint32 dateTop)
+     sLog.outString(">> Flushed all ranking points");
+ }
+ 
++void ObjectMgr::FlushHonorHistory(uint32 beforeDate)
++{
++    if (!beforeDate)
++        return;
++
++    CharacterDatabase.BeginTransaction();
++
++    auto queryResult = CharacterDatabase.PQuery(
++        "SELECT guid,TYPE,COUNT(*) AS kills FROM character_honor_cp "
++        "WHERE date < %u AND victim_type>0 GROUP BY guid,type", beforeDate);
++    if (queryResult)
++    {
++        do
++        {
++            Field* fields = queryResult->Fetch();
++            uint32 guid = fields[0].GetUInt32();
++            uint8 type = fields[1].GetUInt8();
++            uint32 kills = fields[2].GetUInt32();
++
++            if (type == HONORABLE)
++                CharacterDatabase.PExecute(
++                    "UPDATE characters SET stored_honorable_kills = stored_honorable_kills + %u WHERE guid = %u",
++                    kills, guid);
++            else if (type == DISHONORABLE)
++                CharacterDatabase.PExecute(
++                    "UPDATE characters SET stored_dishonorable_kills = stored_dishonorable_kills + %u WHERE guid = %u",
++                    kills, guid);
++        }
++        while (queryResult->NextRow());
++    }
++
++    CharacterDatabase.PExecute("DELETE FROM character_honor_cp WHERE date < %u", beforeDate);
++    CharacterDatabase.CommitTransaction();
++
++    sLog.outString(">> Compacted honor history older than date %u", beforeDate);
++}
++
+ void ObjectMgr::DistributeRankPoints(uint32 team, uint32 dateBegin, bool flush /*false*/)
+ {
+     float RP;
+diff --git a/src/game/Globals/ObjectMgr.h b/src/game/Globals/ObjectMgr.h
+index 7e49f59758828a99575d8239f849060695195ff0..956251e3e34bf9905cd4d0ada43db672349bd138 100644
+--- a/src/game/Globals/ObjectMgr.h
++++ b/src/game/Globals/ObjectMgr.h
+@@ -798,6 +798,7 @@ class ObjectMgr
+         uint32 GetHonorStandingPositionByGUID(uint32 guid, uint32 side);
+         void UpdateHonorStandingByGuid(uint32 guid, HonorStanding standing, uint32 side) ;
+         void FlushRankPoints(uint32 dateTop);
++        void FlushHonorHistory(uint32 beforeDate);
+         void DistributeRankPoints(uint32 team, uint32 dateBegin, bool flush = false);
+         void LoadStandingList(uint32 dateBegin);
+         void LoadStandingList();
+diff --git a/src/game/Tools/Formulas.h b/src/game/Tools/Formulas.h
+index 480348f3c042a6d56c10ad51e0f0d57331f699bf..901a7abd535512484b293b89a5e62851c12bba10 100644
+--- a/src/game/Tools/Formulas.h
++++ b/src/game/Tools/Formulas.h
+@@ -220,7 +220,13 @@ namespace MaNGOS
+ 
+             uint32 today = sWorld.GetDateToday();
+ 
+-            int total_kills  = killer->CalculateTotalKills(victim, today, today);
++            uint32 total_kills = killer->CalculateTotalKills(victim, today, today);
++            if (total_kills >= 4)
++                return 0.0f;
++
++            // Patch 1.8.4 / original Classic daily diminishing returns:
++            // 100%, 75%, 50%, 25%, then no honor for the same victim.
++            static float const repeatedKillRate[4] = {1.0f, 0.75f, 0.5f, 0.25f};
+             // int k_rank       = killer->CalculateHonorRank( killer->GetTotalHonor() );
+             uint32 v_rank    = victim->GetHonorRankInfo().visualRank;
+             uint32 k_level   = killer->GetLevel();
+@@ -228,8 +234,8 @@ namespace MaNGOS
+             float diff_honor = (victim->GetRankPoints() / (killer->GetRankPoints() + 1)) + 1;
+             float diff_level = (victim->GetLevel() * (1.0 / (killer->GetLevel())));
+ 
+-            int f = (10 - total_kills) >= 0 ? (10 - total_kills) : 0;
+-            int honor_points = int(((float)(f * 0.25) * (float)((k_level + (v_rank * 5 + 1)) * (1 + 0.05 * diff_honor) * diff_level)));
++            float baseMultiplier = 2.5f * repeatedKillRate[total_kills];
++            int honor_points = int(baseMultiplier * (float)((k_level + (v_rank * 5 + 1)) * (1 + 0.05 * diff_honor) * diff_level));
+             return (honor_points <= 400 ? honor_points : 400) / groupsize;
+         }
+     }
+diff --git a/src/game/World/World.cpp b/src/game/World/World.cpp
+index 7ffd3f2b3e81dc34b70f3493a2126b715efe5464..fe9f8ebc41ee147f8c34304501e4eca49a79dd08 100644
+--- a/src/game/World/World.cpp
++++ b/src/game/World/World.cpp
+@@ -451,6 +451,9 @@ void World::LoadConfigSettings(bool reload)
+     setConfig(CONFIG_FLOAT_RATE_AUCTION_CUT,     "Rate.Auction.Cut", 1.0f);
+     setConfig(CONFIG_UINT32_AUCTION_DEPOSIT_MIN, "Auction.Deposit.Min", 0);
+     setConfig(CONFIG_FLOAT_RATE_HONOR, "Rate.Honor", 1.0f);
++    setConfigPos(CONFIG_FLOAT_CUSTOM_HONOR_WORLD_PVP_KILL_RATE, "Custom.Honor.WorldPvPKillRate", 0.5f);
++    setConfigPos(CONFIG_FLOAT_CUSTOM_HONOR_BATTLEGROUND_KILL_RATE, "Custom.Honor.BattlegroundKillRate", 0.1f);
++    setConfigPos(CONFIG_FLOAT_CUSTOM_HONOR_BATTLEGROUND_BONUS_RATE, "Custom.Honor.BattlegroundBonusRate", 0.1f);
+     setConfigPos(CONFIG_FLOAT_RATE_MINING_AMOUNT, "Rate.Mining.Amount", 1.0f);
+     setConfigPos(CONFIG_FLOAT_RATE_MINING_NEXT,   "Rate.Mining.Next", 1.0f);
+     setConfigPos(CONFIG_FLOAT_RATE_INSTANCE_RESET_TIME, "Rate.InstanceResetTime", 1.0f);
+@@ -574,6 +577,8 @@ void World::LoadConfigSettings(bool reload)
+     setConfig(CONFIG_BOOL_INSTANCE_STRICT_COMBAT_LOCKDOWN,  "Instance.StrictCombatLockdown", false);
+     setConfig(CONFIG_BOOL_CUSTOM_RAID_SCALING_ENABLED, "Custom.RaidScaling.Enabled", false);
+     setConfigMinMax(CONFIG_UINT32_CUSTOM_RAID_SCALING_TARGET_PLAYERS, "Custom.RaidScaling.TargetPlayers", 5, 1, 5);
++    setConfig(CONFIG_BOOL_CUSTOM_HONOR_INSTANT_PROGRESSION_ENABLED, "Custom.Honor.InstantProgression.Enabled", false);
++    setConfig(CONFIG_BOOL_CUSTOM_HONOR_DISHONORABLE_KILLS_CAN_DEMOTE, "Custom.Honor.DishonorableKillsCanDemote", false);
+ 
+     setConfig(CONFIG_BOOL_CAST_UNSTUCK, "CastUnstuck", true);
+     setConfig(CONFIG_UINT32_MAX_SPELL_CASTS_IN_CHAIN, "MaxSpellCastsInChain", 20);
+@@ -1411,8 +1416,13 @@ void World::SetInitialWorldSettings()
+     sLog.outString("Starting server Maintenance system...");
+     InitServerMaintenanceCheck();
+ 
+-    sLog.outString("Loading Honor Standing list...");
+-    sObjectMgr.LoadStandingList();
++    if (!getConfig(CONFIG_BOOL_CUSTOM_HONOR_INSTANT_PROGRESSION_ENABLED))
++    {
++        sLog.outString("Loading Honor Standing list...");
++        sObjectMgr.LoadStandingList();
++    }
++    else
++        sLog.outString("Instant honor progression enabled; weekly standings and rank distribution are disabled.");
+ 
+     sLog.outString("Loading Spam records...");
+     LoadSpamRecords();
+@@ -1688,7 +1698,8 @@ void World::Update(uint32 diff)
+         if (GetDateToday() >= m_NextMaintenanceDate)
+         {
+             ServerMaintenanceStart();
+-            sObjectMgr.LoadStandingList();
++            if (!getConfig(CONFIG_BOOL_CUSTOM_HONOR_INSTANT_PROGRESSION_ENABLED))
++                sObjectMgr.LoadStandingList();
+         }
+         m_MaintenanceTimeChecker = 600000; // check 10 minutes
+     }
+@@ -2179,14 +2190,28 @@ void World::UpdateSessions(uint32 diff)
+ 
+ void World::ServerMaintenanceStart()
+ {
+-    uint32 LastWeekEnd    = GetDateLastMaintenanceDay();
+-    m_NextMaintenanceDate   = LastWeekEnd + 7; // next maintenance begin
++    if (getConfig(CONFIG_BOOL_CUSTOM_HONOR_INSTANT_PROGRESSION_ENABLED))
++    {
++        uint32 today = GetDateToday();
++        uint32 beforeDate = today > 14 ? today - 14 : 0;
++        m_NextMaintenanceDate = today + 1;
++
++        sObjectMgr.FlushHonorHistory(beforeDate);
++        for (SessionMap::iterator itr = m_sessions.begin(); itr != m_sessions.end(); ++itr)
++            if (itr->second->GetPlayer() && itr->second->GetPlayer()->IsInWorld())
++                itr->second->GetPlayer()->CompactHonorHistory(beforeDate);
++    }
++    else
++    {
++        uint32 lastWeekEnd = GetDateLastMaintenanceDay();
++        m_NextMaintenanceDate = lastWeekEnd + 7; // next maintenance begin
+ 
+-    if (m_NextMaintenanceDate <= GetDateToday())            // avoid loop in manually case, maybe useless
+-        m_NextMaintenanceDate += 7;
++        if (m_NextMaintenanceDate <= GetDateToday())        // avoid loop in manually case, maybe useless
++            m_NextMaintenanceDate += 7;
+ 
+-    // flushing rank points list ( standing must be reloaded after server maintenance )
+-    sObjectMgr.FlushRankPoints(LastWeekEnd);
++        // flushing rank points list (standing must be reloaded after server maintenance)
++        sObjectMgr.FlushRankPoints(lastWeekEnd);
++    }
+ 
+     // save and update all online players
+     for (SessionMap::iterator itr = m_sessions.begin(); itr != m_sessions.end(); ++itr)
+@@ -2198,6 +2223,23 @@ void World::ServerMaintenanceStart()
+ 
+ void World::InitServerMaintenanceCheck()
+ {
++    if (getConfig(CONFIG_BOOL_CUSTOM_HONOR_INSTANT_PROGRESSION_ENABLED))
++    {
++        uint32 today = GetDateToday();
++        uint32 beforeDate = today > 14 ? today - 14 : 0;
++        m_NextMaintenanceDate = today + 1;
++        sObjectMgr.FlushHonorHistory(beforeDate);
++
++        auto queryResult = CharacterDatabase.Query("SELECT NextMaintenanceDate FROM saved_variables");
++        if (queryResult)
++            CharacterDatabase.PExecute("UPDATE saved_variables SET NextMaintenanceDate = '" UI64FMTD "'", uint64(m_NextMaintenanceDate));
++        else
++            CharacterDatabase.PExecute("INSERT INTO saved_variables (NextMaintenanceDate) VALUES ('" UI64FMTD "')", uint64(m_NextMaintenanceDate));
++
++        DEBUG_LOG("Instant honor history maintenance initialized.");
++        return;
++    }
++
+     auto queryResult = CharacterDatabase.Query("SELECT NextMaintenanceDate FROM saved_variables");
+     if (!queryResult)
+     {
+diff --git a/src/game/World/World.h b/src/game/World/World.h
+index 44fb2d958e1ad68794e4dd553d5e8ea316ba11aa..53b75b7d870d67802555a23abae632d889a6a6e1 100644
+--- a/src/game/World/World.h
++++ b/src/game/World/World.h
+@@ -286,6 +286,9 @@ enum eConfigFloatValues
+     CONFIG_FLOAT_GHOST_RUN_SPEED_WORLD,
+     CONFIG_FLOAT_GHOST_RUN_SPEED_BG,
+     CONFIG_FLOAT_LEASH_RADIUS,
++    CONFIG_FLOAT_CUSTOM_HONOR_WORLD_PVP_KILL_RATE,
++    CONFIG_FLOAT_CUSTOM_HONOR_BATTLEGROUND_KILL_RATE,
++    CONFIG_FLOAT_CUSTOM_HONOR_BATTLEGROUND_BONUS_RATE,
+     CONFIG_FLOAT_VALUE_COUNT
+ };
+ 
+@@ -357,6 +360,8 @@ enum eConfigBoolValues
+     CONFIG_BOOL_PRELOAD_MMAP_TILES,
+     CONFIG_BOOL_REGEN_ZONE_AREA_ON_STARTUP,
+     CONFIG_BOOL_CUSTOM_RAID_SCALING_ENABLED,
++    CONFIG_BOOL_CUSTOM_HONOR_INSTANT_PROGRESSION_ENABLED,
++    CONFIG_BOOL_CUSTOM_HONOR_DISHONORABLE_KILLS_CAN_DEMOTE,
+     CONFIG_BOOL_VALUE_COUNT
+ };
+ 
+diff --git a/src/mangosd/mangosd.conf.dist.in b/src/mangosd/mangosd.conf.dist.in
+index 987d1014eedf333e9de5c60a2123a47f1571affc..da66de93c49af578bcc026c6285c9c731bc391b5 100644
+--- a/src/mangosd/mangosd.conf.dist.in
++++ b/src/mangosd/mangosd.conf.dist.in
+@@ -585,7 +585,8 @@ LogColors = ""
+ #        Default: 0
+ #
+ #    MinHonorKills
+-#        Min kills that players must obtain to enter in weekly honor calculation
++#        Minimum kills required to enter weekly honor calculation, or to
++#        unlock Rank 1 when instant progression is enabled.
+ #        Default: 15
+ #
+ #    MaintenanceDay
+@@ -593,6 +594,30 @@ LogColors = ""
+ #        range (0..6): 0 is the first day of the week (normally sunday), 6 is the latest
+ #        Default: 3 (Wednesday in EU)
+ #
++#    Custom.Honor.InstantProgression.Enabled
++#        Replace weekly standing, bracket, distribution, and decay with
++#        immediate permanent rank-point gains.
++#        Default: 0 - retain the original weekly system
++#                 1 - use instant progression
++#
++#    Custom.Honor.WorldPvPKillRate
++#        Rank-point multiplier for honorable player kills outside battlegrounds.
++#        Default: 0.5
++#
++#    Custom.Honor.BattlegroundKillRate
++#        Rank-point multiplier for honorable player kills inside battlegrounds.
++#        Default: 0.1
++#
++#    Custom.Honor.BattlegroundBonusRate
++#        Rank-point multiplier for battleground objectives and bonus honor.
++#        Default: 0.1
++#
++#    Custom.Honor.DishonorableKillsCanDemote
++#        Whether dishonorable kills can remove an already attained rank when
++#        instant progression is enabled.
++#        Default: 0 - subtract only progress within the highest attained rank
++#                 1 - allow demotion
++#
+ #    InstantLogout
+ #        Enable or disable instant logout for security level (0..4) or high (NOT in combat/while dueling/while falling)
+ #        Default: 1 (Mods/GMs/Admins)
+@@ -830,6 +855,11 @@ MaxHonorPoints = 75000
+ StartHonorPoints = 0
+ MinHonorKills = 15
+ MaintenanceDay = 3
++Custom.Honor.InstantProgression.Enabled = 0
++Custom.Honor.WorldPvPKillRate = 0.5
++Custom.Honor.BattlegroundKillRate = 0.1
++Custom.Honor.BattlegroundBonusRate = 0.1
++Custom.Honor.DishonorableKillsCanDemote = 0
+ InstantLogout = 1
+ DisableWaterBreath = 4
+ AlwaysShowQuestGreeting = 0
