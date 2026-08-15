@@ -26,6 +26,8 @@ Classic-specific core patches are intentionally split by concern:
   independent health and damage budgets;
 - `0104-five-character-blackrock-spire-mechanics.patch` reduces the fixed-size
   Upper Blackrock Spire event waves for a five-character group.
+- `0105-dungeon-like-raid-resets.patch` removes permanent raid boss binds and
+  global weekly schedules so raids reset like normal dungeons.
 
 The Classic database patches are also split by concern. In particular,
 `0103-five-character-instance-caps.patch` caps every active finite-sized

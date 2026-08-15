@@ -8,7 +8,7 @@ tests/validate-patches.sh /path/to/mangos-classic /path/to/classic-db /path/to/p
 
 This gate also verifies the instant-honor source weights, full-value PlayerBots,
 daily per-target diminishing returns, immediate rank-point storage, rank floor,
-and removal of weekly maintenance from the enabled policy.
+removal of weekly honor maintenance, and dungeon-like raid reset behavior.
 
 After building the server image, verify that the executable starts and that
 the pinned binary contains the PlayerBots command-line integration:
@@ -49,10 +49,10 @@ execution, kill, loot, and lockout/progression state.
 | Instance | Representative gate | Specific observations |
 | -------- | ------------------- | --------------------- |
 | Upper Blackrock Spire | Emberseer, Rend, and Drakkisath | Confirm four active incarcerators, three active Stadium enemies per wave, four Flamewreath waves, boss/guard targeting, kill, loot, and saved instance. Also confirm a Lower Blackrock Spire run retains native creature strength. |
-| Onyxia's Lair | Onyxia | Confirm four first-wave whelps, two-to-three later whelps, ranged positioning during flight, fear recovery, kill, loot, and saved instance. |
-| Molten Core | Majordomo and Ragnaros | Confirm the mixed four-add Majordomo pack, crowd control/dispels, three Sons of Flame, submerge/emerge progression, loot, and lockout. |
+| Onyxia's Lair | Onyxia | Confirm four first-wave whelps, two-to-three later whelps, ranged positioning during flight, fear recovery, kill, loot, and resettable instance progress. |
+| Molten Core | Majordomo and Ragnaros | Confirm the mixed four-add Majordomo pack, crowd control/dispels, three Sons of Flame, submerge/emerge progression, loot, and resettable instance progress. |
 | Blackwing Lair | Razorgore and Nefarian | Confirm phase transition at eight eggs and ten drakonid kills, orb/add targeting, class-call handling, kill, loot, and instance progression. Separately exercise Suppression Room and Chromaggus dispels. |
-| Zul'Gurub | Renataki and Hakkar | Confirm Thousand Blades never targets more than three secondary players, automatic ZG strategy activation, poison handling, add targeting, kill, loot, and lockout. |
+| Zul'Gurub | Renataki and Hakkar | Confirm Thousand Blades never targets more than three secondary players, automatic ZG strategy activation, poison handling, add targeting, kill, loot, and resettable instance progress. |
 
 For the solo calibration, use a geared level-60 character without bots and pull
 one representative elite at a time in Upper Blackrock Spire, Onyxia's Lair,
@@ -75,6 +75,21 @@ Check leash/terrain behavior, tank survival, healer mana, add handling, loot,
 and respawn/event state. The numerical policies and build are automated; this
 matrix is the required gameplay-balance qualification before calling every
 encounter production-balanced.
+
+## Raid reset runtime qualification
+
+Enter each retained raid, kill at least one boss that historically created a
+permanent save, and confirm the character does not gain a weekly raid lockout.
+Have every player and bot leave the instance, use **Reset All Instances** as the
+group leader, then re-enter and confirm the bosses, trash, encounter state, and
+loot state belong to a fresh instance. Repeat once after a world-server restart
+to prove the per-instance save remains resettable across restarts.
+
+Also attempt the reset while one member remains inside and confirm it fails
+without deleting progress. On an upgraded character database containing an old
+weekly raid save, start the new server once and confirm the existing progress is
+preserved but becomes non-permanent and resettable. Raid entry must remain
+outside the normal five-instances-per-hour tracker.
 
 ## Instant honor runtime qualification
 

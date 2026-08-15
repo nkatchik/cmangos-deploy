@@ -29,6 +29,9 @@ No external patch repository is required.
   without weakening Lower Blackrock Spire.
 - A normal group is one human and four bots, converted to a raid when the
   instance requires it.
+- Raid instances have no weekly lockout. Once everyone leaves, the leader can
+  use **Reset All Instances** and immediately begin a fresh run, just like a
+  normal dungeon; existing weekly saves are converted on the first restart.
 - The default PlayerBots role template is one tank, one healer, and three DPS.
 - Raid-trash and boss health and damage budgets are independently data-driven
   across every retained raid. The trash baseline targets a slow but feasible
