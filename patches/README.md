@@ -35,4 +35,6 @@ dungeon or raid at five, while `0104-tiered-raid-creature-tuning.patch` sets
 the retained-raid tiers and targets Upper Blackrock Spire entries explicitly
 so Lower Blackrock Spire stays at native tuning. The follow-up
 `0105-lower-five-character-raid-damage.patch` gives raid bosses, world bosses,
-and Upper Blackrock Spire a safer dungeon-like per-hit damage ceiling.
+and Upper Blackrock Spire a safer dungeon-like per-hit damage ceiling. Finally,
+`0106-random-edge-of-madness.patch` removes Zul'Gurub's real-time boss rotation
+and makes the Brazier select one of the four bosses at random per fresh run.

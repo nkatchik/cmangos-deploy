@@ -32,6 +32,8 @@ No external patch repository is required.
 - Raid instances have no weekly lockout. Once everyone leaves, the leader can
   use **Reset All Instances** and immediately begin a fresh run, just like a
   normal dungeon; existing weekly saves are converted on the first restart.
+- Zul'Gurub's Edge of Madness has no calendar rotation. Each fresh instance
+  rolls one of its four bosses when the Brazier of Madness is first used.
 - The default PlayerBots role template is one tank, one healer, and three DPS.
 - Raid-trash and boss health and damage budgets are independently data-driven
   across every retained raid. The trash baseline targets a slow but feasible

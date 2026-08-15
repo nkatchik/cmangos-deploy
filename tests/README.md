@@ -8,7 +8,8 @@ tests/validate-patches.sh /path/to/mangos-classic /path/to/classic-db /path/to/p
 
 This gate also verifies the instant-honor source weights, full-value PlayerBots,
 daily per-target diminishing returns, immediate rank-point storage, rank floor,
-removal of weekly honor maintenance, and dungeon-like raid reset behavior.
+removal of weekly honor maintenance, dungeon-like raid reset behavior, and the
+four-way random Edge of Madness selection.
 
 After building the server image, verify that the executable starts and that
 the pinned binary contains the PlayerBots command-line integration:
@@ -28,7 +29,9 @@ The live gate proves that every active finite-sized dungeon and retained raid
 has a five-character cap, the three post-cutoff raids and their spawns are
 absent, the launch events are disabled, every retained raid/world-boss family
 has a scaling policy, Lower Blackrock Spire keeps native tuning, and the Upper
-Blackrock Spire entries have explicit five-character tuning.
+Blackrock Spire entries have explicit five-character tuning. It also proves
+that the Edge of Madness calendar events are absent and all four bosses remain
+eligible for the per-instance random roll.
 
 A complete `mangosd` startup needs DBC, map, vmap, and mmap data extracted from
 a legally obtained 1.12.1 client. Once those files are mounted and the full
@@ -52,7 +55,7 @@ execution, kill, loot, and lockout/progression state.
 | Onyxia's Lair | Onyxia | Confirm four first-wave whelps, two-to-three later whelps, ranged positioning during flight, fear recovery, kill, loot, and resettable instance progress. |
 | Molten Core | Majordomo and Ragnaros | Confirm the mixed four-add Majordomo pack, crowd control/dispels, three Sons of Flame, submerge/emerge progression, loot, and resettable instance progress. |
 | Blackwing Lair | Razorgore and Nefarian | Confirm phase transition at eight eggs and ten drakonid kills, orb/add targeting, class-call handling, kill, loot, and instance progression. Separately exercise Suppression Room and Chromaggus dispels. |
-| Zul'Gurub | Renataki and Hakkar | Confirm Thousand Blades never targets more than three secondary players, automatic ZG strategy activation, poison handling, add targeting, kill, loot, and resettable instance progress. |
+| Zul'Gurub | Edge of Madness, Renataki, and Hakkar | Confirm the Brazier summons exactly one of the four Edge of Madness bosses, cannot reroll in the same live instance, and becomes available after reset. Also confirm Thousand Blades never targets more than three secondary players, automatic ZG strategy activation, poison handling, add targeting, kill, loot, and resettable instance progress. |
 
 For the solo calibration, use a geared level-60 character without bots and pull
 one representative elite at a time in Upper Blackrock Spire, Onyxia's Lair,
