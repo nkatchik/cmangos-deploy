@@ -1,0 +1,201 @@
+diff --git a/src/game/Entities/Player.cpp b/src/game/Entities/Player.cpp
+index f5f31de24..b1ef80216 100644
+--- a/src/game/Entities/Player.cpp
++++ b/src/game/Entities/Player.cpp
+@@ -16541,8 +16541,9 @@ void Player::ResetInstances(InstanceResetMethod method)
+ 
+         if (method == INSTANCE_RESET_ALL)
+         {
+-            // the "reset all instances" method can only reset normal maps
+-            if (entry->map_type == MAP_RAID)
++            // raids can be reset only when using the dungeon-like reset policy
++            if (entry->map_type == MAP_RAID &&
++                    !sWorld.getConfig(CONFIG_BOOL_CUSTOM_RAID_DUNGEON_LIKE_RESETS))
+             {
+                 ++itr;
+                 continue;
+diff --git a/src/game/Entities/Unit.cpp b/src/game/Entities/Unit.cpp
+index 8c88f68bd..618b9e92c 100644
+--- a/src/game/Entities/Unit.cpp
++++ b/src/game/Entities/Unit.cpp
+@@ -1413,7 +1413,8 @@ void Unit::JustKilledCreature(Unit* killer, Creature* victim, Player* responsibl
+         if (map->IsDungeon())
+         {
+             Player* creditedPlayer = killer ? killer->GetBeneficiaryPlayer() : nullptr; // TODO: do instance binding anyway if the charmer/owner is offline
+-            if (map->IsRaid() && victim->GetCreatureInfo()->ExtraFlags & CREATURE_EXTRA_FLAG_INSTANCE_BIND)
++            if (map->IsRaid() && !sWorld.getConfig(CONFIG_BOOL_CUSTOM_RAID_DUNGEON_LIKE_RESETS) &&
++                    (victim->GetCreatureInfo()->ExtraFlags & CREATURE_EXTRA_FLAG_INSTANCE_BIND))
+             {
+                 static_cast<DungeonMap*>(map)->PermBindAllPlayers(creditedPlayer);
+             }
+diff --git a/src/game/Groups/Group.cpp b/src/game/Groups/Group.cpp
+index 036bfccae..f506ae5fd 100644
+--- a/src/game/Groups/Group.cpp
++++ b/src/game/Groups/Group.cpp
+@@ -1348,8 +1348,9 @@ void Group::ResetInstances(InstanceResetMethod method, Player* SendMsgTo)
+ 
+         if (method == INSTANCE_RESET_ALL)
+         {
+-            // the "reset all instances" method can only reset normal maps
+-            if (entry->map_type == MAP_RAID)
++            // raids can be reset only when using the dungeon-like reset policy
++            if (entry->map_type == MAP_RAID &&
++                    !sWorld.getConfig(CONFIG_BOOL_CUSTOM_RAID_DUNGEON_LIKE_RESETS))
+             {
+                 ++itr;
+                 continue;
+diff --git a/src/game/Maps/Map.cpp b/src/game/Maps/Map.cpp
+index 348bcb36d..f19a4bb72 100644
+--- a/src/game/Maps/Map.cpp
++++ b/src/game/Maps/Map.cpp
+@@ -2023,10 +2023,11 @@ void DungeonMap::SendResetWarnings(uint32 timeLeft) const
+ 
+ void DungeonMap::SetResetSchedule(bool on)
+ {
+-    // only for normal instances
+-    // the reset time is only scheduled when there are no payers inside
++    // only for normal instances, plus raids using the dungeon-like reset policy
++    // the reset time is only scheduled when there are no players inside
+     // it is assumed that the reset time will rarely (if ever) change while the reset is scheduled
+-    if (!HavePlayers() && !IsRaid())
++    if (!HavePlayers() &&
++            (!IsRaid() || sWorld.getConfig(CONFIG_BOOL_CUSTOM_RAID_DUNGEON_LIKE_RESETS)))
+     {
+         time_t resetTime;
+         if (on)
+diff --git a/src/game/Maps/MapPersistentStateMgr.cpp b/src/game/Maps/MapPersistentStateMgr.cpp
+index 9634ef89d..ec6c662bf 100644
+--- a/src/game/Maps/MapPersistentStateMgr.cpp
++++ b/src/game/Maps/MapPersistentStateMgr.cpp
+@@ -293,9 +293,10 @@ InstanceTemplate const* DungeonPersistentState::GetTemplate() const
+ 
+ time_t DungeonPersistentState::GetResetTimeForDB() const
+ {
+-    // only state the reset time for normal instances
++    // Global-reset raids keep their reset time in instance_reset instead.
+     const MapEntry* entry = sMapStore.LookupEntry(GetMapId());
+-    if (!entry || entry->map_type == MAP_RAID)
++    if (!entry || (entry->map_type == MAP_RAID &&
++            !sWorld.getConfig(CONFIG_BOOL_CUSTOM_RAID_DUNGEON_LIKE_RESETS)))
+         return 0;
+     return GetResetTime();
+ }
+@@ -367,9 +368,41 @@ void DungeonResetScheduler::LoadResetTimes()
+ 
+     // NOTE: Use DirectPExecute for tables that will be queried later
+ 
+-    // get the current reset times for normal instances (these may need to be updated)
++    if (sWorld.getConfig(CONFIG_BOOL_CUSTOM_RAID_DUNGEON_LIKE_RESETS))
++    {
++        uint32 converted = 0;
++        auto legacyRaidResult = CharacterDatabase.Query("SELECT id, map FROM instance WHERE resettime = 0");
++        if (legacyRaidResult)
++        {
++            do
++            {
++                Field* fields = legacyRaidResult->Fetch();
++                uint32 instanceId = fields[0].GetUInt32();
++                uint32 mapId = fields[1].GetUInt32();
++                MapEntry const* mapEntry = sMapStore.LookupEntry(mapId);
++
++                if (!mapEntry || !mapEntry->IsRaid() || !ObjectMgr::GetInstanceTemplate(mapId))
++                    continue;
++
++                CharacterDatabase.DirectPExecute(
++                    "UPDATE instance SET resettime = '" UI64FMTD "' WHERE id = '%u'",
++                    uint64(now + NORMAL_INSTANCE_RESET_TIME), instanceId);
++                CharacterDatabase.DirectPExecute(
++                    "UPDATE character_instance SET permanent = 0 WHERE instance = '%u'", instanceId);
++                CharacterDatabase.DirectPExecute(
++                    "UPDATE group_instance SET permanent = 0 WHERE instance = '%u'", instanceId);
++                ++converted;
++            }
++            while (legacyRaidResult->NextRow());
++        }
++
++        if (converted)
++            sLog.outString(">> Converted %u legacy raid save(s) to dungeon-like resets", converted);
++    }
++
++    // get the current reset times for normal and dungeon-like raid instances
+     // these are only kept in memory for InstanceSaves that are loaded later
+-    // resettime = 0 in the DB for raid instances so those are skipped
++    // resettime = 0 in the DB for globally reset raid instances so those are skipped
+     typedef std::map<uint32, std::pair<uint32, time_t> > ResetTimeMapType;
+     ResetTimeMapType InstResetTime;
+ 
+@@ -437,6 +470,13 @@ void DungeonResetScheduler::LoadResetTimes()
+ 
+             MapEntry const* mapEntry = sMapStore.LookupEntry(mapid);
+ 
++            if (mapEntry && mapEntry->IsRaid() &&
++                    sWorld.getConfig(CONFIG_BOOL_CUSTOM_RAID_DUNGEON_LIKE_RESETS))
++            {
++                CharacterDatabase.DirectPExecute("DELETE FROM instance_reset WHERE mapid = '%u'", mapid);
++                continue;
++            }
++
+             if (!mapEntry || !mapEntry->IsDungeon() || !ObjectMgr::GetInstanceTemplate(mapid))
+             {
+                 sLog.outError("MapPersistentStateManager::LoadResetTimes: invalid mapid %u in instance_reset!", mapid);
+@@ -472,6 +512,9 @@ void DungeonResetScheduler::LoadResetTimes()
+         if (!mapEntry || !mapEntry->IsDungeon())
+             continue;
+ 
++        if (mapEntry->IsRaid() && sWorld.getConfig(CONFIG_BOOL_CUSTOM_RAID_DUNGEON_LIKE_RESETS))
++            continue;
++
+         uint32 period = GetMaxResetTimeFor(temp);
+         time_t t = GetResetTimeFor(temp->map);
+         if (!t)
+@@ -645,8 +688,9 @@ MapPersistentState* MapPersistentStateManager::AddPersistentState(MapEntry const
+         if (!resetTime)
+         {
+             // initialize reset time
+-            // for normal instances if no creatures are killed the instance will reset in 30 minutes
+-            if (mapEntry->map_type == MAP_RAID)
++            // dungeon-like saves reset in 30 minutes if no creatures are killed
++            if (mapEntry->map_type == MAP_RAID &&
++                    !sWorld.getConfig(CONFIG_BOOL_CUSTOM_RAID_DUNGEON_LIKE_RESETS))
+                 resetTime = m_Scheduler.GetResetTimeFor(mapEntry->MapID);
+             else
+             {
+diff --git a/src/game/World/World.cpp b/src/game/World/World.cpp
+index fe9f8ebc4..0222ea7e6 100644
+--- a/src/game/World/World.cpp
++++ b/src/game/World/World.cpp
+@@ -577,6 +577,7 @@ void World::LoadConfigSettings(bool reload)
+     setConfig(CONFIG_BOOL_INSTANCE_STRICT_COMBAT_LOCKDOWN,  "Instance.StrictCombatLockdown", false);
+     setConfig(CONFIG_BOOL_CUSTOM_RAID_SCALING_ENABLED, "Custom.RaidScaling.Enabled", false);
+     setConfigMinMax(CONFIG_UINT32_CUSTOM_RAID_SCALING_TARGET_PLAYERS, "Custom.RaidScaling.TargetPlayers", 5, 1, 5);
++    setConfig(CONFIG_BOOL_CUSTOM_RAID_DUNGEON_LIKE_RESETS, "Custom.Raid.DungeonLikeResets", false);
+     setConfig(CONFIG_BOOL_CUSTOM_HONOR_INSTANT_PROGRESSION_ENABLED, "Custom.Honor.InstantProgression.Enabled", false);
+     setConfig(CONFIG_BOOL_CUSTOM_HONOR_DISHONORABLE_KILLS_CAN_DEMOTE, "Custom.Honor.DishonorableKillsCanDemote", false);
+ 
+diff --git a/src/game/World/World.h b/src/game/World/World.h
+index 53b75b7d8..57ee3a095 100644
+--- a/src/game/World/World.h
++++ b/src/game/World/World.h
+@@ -360,6 +360,7 @@ enum eConfigBoolValues
+     CONFIG_BOOL_PRELOAD_MMAP_TILES,
+     CONFIG_BOOL_REGEN_ZONE_AREA_ON_STARTUP,
+     CONFIG_BOOL_CUSTOM_RAID_SCALING_ENABLED,
++    CONFIG_BOOL_CUSTOM_RAID_DUNGEON_LIKE_RESETS,
+     CONFIG_BOOL_CUSTOM_HONOR_INSTANT_PROGRESSION_ENABLED,
+     CONFIG_BOOL_CUSTOM_HONOR_DISHONORABLE_KILLS_CAN_DEMOTE,
+     CONFIG_BOOL_VALUE_COUNT
+diff --git a/src/mangosd/mangosd.conf.dist.in b/src/mangosd/mangosd.conf.dist.in
+index da66de93c..6ec842d1a 100644
+--- a/src/mangosd/mangosd.conf.dist.in
++++ b/src/mangosd/mangosd.conf.dist.in
+@@ -880,6 +880,10 @@ Instance.StrictCombatLockdown = 0
+ # target as their hard instance-player cap. Supported target range: 1-5.
+ Custom.RaidScaling.Enabled = 0
+ Custom.RaidScaling.TargetPlayers = 5
++
++# Make raid saves behave like normal dungeon saves: no permanent boss binds or
++# global weekly schedule, and allow reset-all when the instance is empty.
++Custom.Raid.DungeonLikeResets = 0
+ Instance.ResetTimeHour = 4
+ Instance.UnloadDelay = 1800000
+ Instance.DisableRelocate = 0

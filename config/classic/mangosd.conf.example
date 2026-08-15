@@ -701,6 +701,13 @@ LogColors = ""
 #        Default: 0 (false, drop combat, default pre-2.3.0)
 #                 1 (true, combat persists, default post-2.3.0)
 #
+#    Custom.Raid.DungeonLikeResets
+#        Make raid instances use normal-dungeon saves: bosses do not create
+#        permanent binds, there is no global weekly schedule, and an empty raid
+#        can be reset with Reset All Instances.
+#        Default: 0 (false)
+#                 1 (true)
+#
 #    Instance.ResetTimeHour
 #        The hour of the day (0-23) when the global instance resets occur.
 #        Default: 4
@@ -888,6 +895,7 @@ Instance.IgnoreRaid = 0
 Instance.StrictCombatLockdown = 0
 Custom.RaidScaling.Enabled = 1
 Custom.RaidScaling.TargetPlayers = 5
+Custom.Raid.DungeonLikeResets = 1
 Instance.ResetTimeHour = 4
 Instance.UnloadDelay = 1800000
 Instance.DisableRelocate = 0
