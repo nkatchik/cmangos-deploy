@@ -68,6 +68,8 @@ rg -Fq 'SET `damage_multiplier` = 0.55,' \
   "$work_dir/database/Updates/9999_custom_03_lower_raid_damage.sql"
 rg -q 'customRaidTargetPlayers' "$work_dir/playerbots/playerbot/strategy/actions/InviteToGroupAction.cpp"
 "$repo_root/tests/validate-honor-policy.sh" "$work_dir/core"
+"$repo_root/tests/validate-raid-reset-policy.sh" "$work_dir/core"
 rg -Fq 'Custom.Honor.InstantProgression.Enabled = 1' "$repo_root/config/classic/mangosd.conf.example"
+rg -Fq 'Custom.Raid.DungeonLikeResets = 1' "$repo_root/config/classic/mangosd.conf.example"
 
 echo "Pinned Classic core, database, and PlayerBots patches apply cleanly."
