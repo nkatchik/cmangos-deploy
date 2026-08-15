@@ -50,6 +50,7 @@ test -f "$work_dir/database/Updates/9998_disable_post_1_8_4_progression.sql"
 test -f "$work_dir/database/Updates/9999_custom_01_five_character_instance_caps.sql"
 test -f "$work_dir/database/Updates/9999_custom_02_tiered_raid_tuning.sql"
 test -f "$work_dir/database/Updates/9999_custom_03_lower_raid_damage.sql"
+test -f "$work_dir/database/Updates/9999_custom_04_random_edge_of_madness.sql"
 test -f "$work_dir/database/Updates/Instances/999_disable_post_1_8_4_raids.sql"
 test -f "$work_dir/playerbots/playerbot/strategy/generic/ZulGurubDungeonStrategies.h"
 
@@ -66,6 +67,14 @@ rg -Fq 'WHERE `map_id` IN (249, 409, 469);' \
   "$work_dir/database/Updates/9999_custom_03_lower_raid_damage.sql"
 rg -Fq 'SET `damage_multiplier` = 0.55,' \
   "$work_dir/database/Updates/9999_custom_03_lower_raid_damage.sql"
+edge_of_madness_sql="$work_dir/database/Updates/9999_custom_04_random_edge_of_madness.sql"
+rg -Fq '(180327, 5000, 0, 45, 0, 999904' "$edge_of_madness_sql"
+edge_random_choices=$(rg -c '^    \(999904, 1, 9999040[1-4], 0,' "$edge_of_madness_sql")
+[[ "$edge_random_choices" -eq 4 ]]
+edge_boss_summons=$(rg -c '^    \(9999040[1-4], 0, 0, 10, 1508[2-5], 259200,' "$edge_of_madness_sql")
+[[ "$edge_boss_summons" -eq 4 ]]
+rg -Fq 'DELETE FROM `game_event` WHERE `entry` IN (29, 30, 31, 32);' "$edge_of_madness_sql"
+rg -Fq 'DELETE FROM `conditions` WHERE `condition_entry` IN (6029, 6030, 6031, 6032);' "$edge_of_madness_sql"
 rg -q 'customRaidTargetPlayers' "$work_dir/playerbots/playerbot/strategy/actions/InviteToGroupAction.cpp"
 "$repo_root/tests/validate-honor-policy.sh" "$work_dir/core"
 "$repo_root/tests/validate-raid-reset-policy.sh" "$work_dir/core"

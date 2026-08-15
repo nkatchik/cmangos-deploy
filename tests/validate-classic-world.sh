@@ -95,6 +95,31 @@ expect_equal \
   "SELECT COUNT(*) FROM custom_raid_scaling WHERE ((map_id=0 AND creature_id=12397) OR (map_id=1 AND creature_id=6109) OR (map_id IN (0,1) AND creature_id IN (14887,14888,14889,14890))) AND ABS(damage_multiplier-0.40)<0.0001 AND ABS(boss_damage_multiplier-0.40)<0.0001;"
 
 expect_equal \
+  "the Brazier of Madness starts one random relay" \
+  1 \
+  "SELECT COUNT(*) FROM dbscripts_on_go_template_use WHERE id=180327 AND command=45 AND datalong=0 AND datalong2=999904 AND condition_id=0;"
+
+expect_equal \
+  "all four Edge of Madness bosses are equally eligible" \
+  4 \
+  "SELECT COUNT(*) FROM dbscript_random_templates WHERE id=999904 AND type=1 AND target_id IN (99990401,99990402,99990403,99990404) AND chance=0;"
+
+expect_equal \
+  "each Edge of Madness choice summons exactly one boss" \
+  4 \
+  "SELECT IF(COUNT(*)=4 AND COUNT(DISTINCT id)=4 AND COUNT(DISTINCT datalong)=4,4,0) FROM dbscripts_on_relay WHERE id IN (99990401,99990402,99990403,99990404) AND command=10 AND datalong IN (15082,15083,15084,15085) AND condition_id=0;"
+
+expect_equal \
+  "the Edge of Madness calendar rotation is absent" \
+  0 \
+  "SELECT COUNT(*) FROM game_event WHERE entry IN (29,30,31,32);"
+
+expect_equal \
+  "the retired Edge of Madness event conditions are absent" \
+  0 \
+  "SELECT COUNT(*) FROM conditions WHERE condition_entry IN (6029,6030,6031,6032);"
+
+expect_equal \
   "representative post-cutoff raid quests have no quest givers" \
   0 \
   "SELECT (SELECT COUNT(*) FROM creature_questrelation WHERE quest IN (8286,8743,9121,9250)) + (SELECT COUNT(*) FROM gameobject_questrelation WHERE quest IN (8286,8743,9121,9250));"
