@@ -62,6 +62,14 @@ repeatable isolated kill, not solo completion of a pack, event, or boss. Run a
 normal five-character clear as the companion check so the solo baseline does
 not make group progression trivial.
 
+For damage safety, record the largest single hit in each representative pull.
+An unavoidable boss attack must not kill its correctly geared intended target
+from full health or leave the healer without a practical reaction window, and
+unavoidable group damage must not one-shot a geared non-tank. Clearly avoidable
+failed mechanics may remain lethal. Effects implemented as explicit instakills
+bypass the general raid-damage multiplier and therefore require a separate
+encounter-specific check.
+
 Also run Azuregos, Lord Kazzak, and one Dragon of Nightmare in the open world.
 Check leash/terrain behavior, tank survival, healer mana, add handling, loot,
 and respawn/event state. The numerical policies and build are automated; this
