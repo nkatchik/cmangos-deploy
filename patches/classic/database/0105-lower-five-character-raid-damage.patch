@@ -1,0 +1,35 @@
+diff --git a/Updates/9999_custom_03_lower_raid_damage.sql b/Updates/9999_custom_03_lower_raid_damage.sql
+new file mode 100644
+index 00000000..d8f5553f
+--- /dev/null
++++ b/Updates/9999_custom_03_lower_raid_damage.sql
+@@ -0,0 +1,29 @@
++-- Use dungeon-like per-hit damage for five-character raid encounters. Bosses
++-- remain harder through their native stats, larger health budget, and mechanics.
++
++UPDATE `custom_raid_scaling`
++SET `damage_multiplier` = 0.40,
++    `boss_damage_multiplier` = 0.40
++WHERE `map_id` IN (249, 409, 469);
++
++UPDATE `custom_raid_scaling`
++SET `damage_multiplier` = 0.45,
++    `boss_damage_multiplier` = 0.45
++WHERE `map_id` = 309;
++
++-- Blackrock Spire shares a map, so leave the neutral LBRS map default alone
++-- and lower only the explicit UBRS creature rows.
++UPDATE `custom_raid_scaling`
++SET `damage_multiplier` = 0.55,
++    `boss_damage_multiplier` = 0.55
++WHERE `map_id` = 229
++  AND `creature_id` <> 0;
++
++-- World bosses are also five-character encounters and need the same safer
++-- damage ceiling as the retained 40-player raids.
++UPDATE `custom_raid_scaling`
++SET `damage_multiplier` = 0.40,
++    `boss_damage_multiplier` = 0.40
++WHERE (`map_id` = 0 AND `creature_id` = 12397)
++   OR (`map_id` = 1 AND `creature_id` = 6109)
++   OR (`map_id` IN (0, 1) AND `creature_id` IN (14887, 14888, 14889, 14890));

@@ -31,4 +31,6 @@ The Classic database patches are also split by concern. In particular,
 `0103-five-character-instance-caps.patch` caps every active finite-sized
 dungeon or raid at five, while `0104-tiered-raid-creature-tuning.patch` sets
 the retained-raid tiers and targets Upper Blackrock Spire entries explicitly
-so Lower Blackrock Spire stays at native tuning.
+so Lower Blackrock Spire stays at native tuning. The follow-up
+`0105-lower-five-character-raid-damage.patch` gives raid bosses, world bosses,
+and Upper Blackrock Spire a safer dungeon-like per-hit damage ceiling.

@@ -49,6 +49,7 @@ test -f "$work_dir/database/Updates/9997_five_character_raid_scaling.sql"
 test -f "$work_dir/database/Updates/9998_disable_post_1_8_4_progression.sql"
 test -f "$work_dir/database/Updates/9999_custom_01_five_character_instance_caps.sql"
 test -f "$work_dir/database/Updates/9999_custom_02_tiered_raid_tuning.sql"
+test -f "$work_dir/database/Updates/9999_custom_03_lower_raid_damage.sql"
 test -f "$work_dir/database/Updates/Instances/999_disable_post_1_8_4_raids.sql"
 test -f "$work_dir/playerbots/playerbot/strategy/generic/ZulGurubDungeonStrategies.h"
 
@@ -61,6 +62,10 @@ rg -Fq "(229, 10899, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Goraluk Anvilcrack');" \
   "$work_dir/database/Updates/9999_custom_02_tiered_raid_tuning.sql"
 ubrs_scaling_rows=$(rg -c '^  \(229,' "$work_dir/database/Updates/9999_custom_02_tiered_raid_tuning.sql")
 [[ "$ubrs_scaling_rows" -eq 27 ]]
+rg -Fq 'WHERE `map_id` IN (249, 409, 469);' \
+  "$work_dir/database/Updates/9999_custom_03_lower_raid_damage.sql"
+rg -Fq 'SET `damage_multiplier` = 0.55,' \
+  "$work_dir/database/Updates/9999_custom_03_lower_raid_damage.sql"
 rg -q 'customRaidTargetPlayers' "$work_dir/playerbots/playerbot/strategy/actions/InviteToGroupAction.cpp"
 "$repo_root/tests/validate-honor-policy.sh" "$work_dir/core"
 rg -Fq 'Custom.Honor.InstantProgression.Enabled = 1' "$repo_root/config/classic/mangosd.conf.example"
