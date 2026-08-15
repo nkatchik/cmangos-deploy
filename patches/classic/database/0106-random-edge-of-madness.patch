@@ -1,0 +1,58 @@
+diff --git a/Updates/9999_custom_04_random_edge_of_madness.sql b/Updates/9999_custom_04_random_edge_of_madness.sql
+new file mode 100644
+index 00000000..1b6f9914
+--- /dev/null
++++ b/Updates/9999_custom_04_random_edge_of_madness.sql
+@@ -0,0 +1,52 @@
++-- Replace the real-time Edge of Madness rotation with one random boss per
++-- fresh Zul'Gurub instance. The Brazier remains activated after use, so a
++-- live instance cannot roll a second boss until the group resets it.
++
++DELETE FROM `dbscripts_on_go_template_use`
++WHERE `id` = 180327;
++
++INSERT INTO `dbscripts_on_go_template_use`
++    (`id`, `delay`, `priority`, `command`, `datalong`, `datalong2`, `datalong3`,
++     `buddy_entry`, `search_radius`, `data_flags`, `dataint`, `dataint2`,
++     `dataint3`, `dataint4`, `datafloat`, `x`, `y`, `z`, `o`, `speed`,
++     `condition_id`, `comments`)
++VALUES
++    (180327, 5000, 0, 45, 0, 999904, 0, 0, 0, 0, 0, 0, 0, 0, 0,
++     0, 0, 0, 0, 0, 0,
++     'Zul''Gurub - Brazier of Madness - summon one random Edge of Madness boss');
++
++DELETE FROM `dbscript_random_templates`
++WHERE `id` = 999904;
++
++INSERT INTO `dbscript_random_templates`
++    (`id`, `type`, `target_id`, `chance`, `comments`)
++VALUES
++    (999904, 1, 99990401, 0, 'Edge of Madness - Gri''lek'),
++    (999904, 1, 99990402, 0, 'Edge of Madness - Hazza''rah'),
++    (999904, 1, 99990403, 0, 'Edge of Madness - Renataki'),
++    (999904, 1, 99990404, 0, 'Edge of Madness - Wushoolay');
++
++DELETE FROM `dbscripts_on_relay`
++WHERE `id` BETWEEN 99990401 AND 99990404;
++
++INSERT INTO `dbscripts_on_relay`
++    (`id`, `delay`, `priority`, `command`, `datalong`, `datalong2`, `datalong3`,
++     `buddy_entry`, `search_radius`, `data_flags`, `dataint`, `dataint2`,
++     `dataint3`, `dataint4`, `datafloat`, `x`, `y`, `z`, `o`, `speed`,
++     `condition_id`, `comments`)
++VALUES
++    (99990401, 0, 0, 10, 15082, 259200, 0, 0, 0, 0, 0, 0, 0, 0, 0, -11901.3, -1906.52, 65.36, 0.87, 0, 0, 'Edge of Madness - summon Gri''lek'),
++    (99990402, 0, 0, 10, 15083, 259200, 0, 0, 0, 0, 0, 0, 0, 0, 0, -11901.3, -1906.52, 65.36, 0.87, 0, 0, 'Edge of Madness - summon Hazza''rah'),
++    (99990403, 0, 0, 10, 15084, 259200, 0, 0, 0, 0, 0, 0, 0, 0, 0, -11901.3, -1906.52, 65.36, 0.87, 0, 0, 'Edge of Madness - summon Renataki'),
++    (99990404, 0, 0, 10, 15085, 259200, 0, 0, 0, 0, 0, 0, 0, 0, 0, -11901.3, -1906.52, 65.36, 0.87, 0, 0, 'Edge of Madness - summon Wushoolay');
++
++-- These four events and their conditions existed only to select the Brazier
++-- boss. Remove the inert calendar rotation after detaching the summon script.
++DELETE FROM `game_event_creature` WHERE ABS(`event`) IN (29, 30, 31, 32);
++DELETE FROM `game_event_creature_data` WHERE `event` IN (29, 30, 31, 32);
++DELETE FROM `game_event_gameobject` WHERE ABS(`event`) IN (29, 30, 31, 32);
++DELETE FROM `game_event_mail` WHERE ABS(`event`) IN (29, 30, 31, 32);
++DELETE FROM `game_event_quest` WHERE `event` IN (29, 30, 31, 32);
++DELETE FROM `game_event_time` WHERE `entry` IN (29, 30, 31, 32);
++DELETE FROM `game_event` WHERE `entry` IN (29, 30, 31, 32);
++DELETE FROM `conditions` WHERE `condition_entry` IN (6029, 6030, 6031, 6032);
