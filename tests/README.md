@@ -18,8 +18,9 @@ the pinned binary contains the PlayerBots command-line integration:
 tests/validate-server-image.sh
 ```
 
-Check that Windows Git checkouts retain LF rules and that both Docker images
-normalize CRLF files from an existing build context:
+Check that Windows Git checkouts retain LF rules, both Docker images normalize
+CRLF files from an existing build context, and the server image avoids
+Dockerfile copy flags unsupported by older BuildKit releases:
 
 ```sh
 tests/validate-windows-build-context.sh

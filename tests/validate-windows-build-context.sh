@@ -24,6 +24,18 @@ for dockerfile in docker/database/Dockerfile docker/server/Dockerfile; do
     "$repo_root/$dockerfile"
 done
 
+server_dockerfile="$repo_root/docker/server/Dockerfile"
+if rg -q '^[[:space:]]*--exclude=' "$server_dockerfile"; then
+  echo "server Dockerfile uses COPY --exclude, which older BuildKit cannot parse" >&2
+  exit 1
+fi
+rg -Fq \
+  'COPY --from=build --chown=$CMANGOS_USER_NAME:$CMANGOS_GROUP_NAME /opt /opt' \
+  "$server_dockerfile"
+for removed_directory in etc include lib share; do
+  rg -Fq "/opt/cmangos/$removed_directory" "$server_dockerfile"
+done
+
 for runtime_script in \
   /opt/scripts/db-functions.sh \
   /docker-entrypoint-initdb.d/create-db.sh \
