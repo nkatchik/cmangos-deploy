@@ -101,7 +101,12 @@ RUN \
     # patches and could pull a different revision than the pinned one.
     -DFETCHCONTENT_SOURCE_DIR_PLAYERBOTS=/build/core/src/modules/PlayerBots && \
   cmake --build . -j"$(nproc)" && \
-  cmake --install .
+  cmake --install . && \
+  rm -rf \
+    /opt/cmangos/etc \
+    /opt/cmangos/include \
+    /opt/cmangos/lib \
+    /opt/cmangos/share
 
 FROM ubuntu:26.04
 
@@ -171,15 +176,10 @@ RUN \
 # at runtime since `mangosd` is patched to read configuration files from
 # `/opt/cmangos/config` (the bind-mount target supplied by the user).
 # `include`, `lib` and `share` may hold bundled fallback libraries CMaNGOS
-# builds when the system lacks them, which our Docker image does not need.
-COPY \
-  --from=build \
-  --exclude=cmangos/etc* \
-  --exclude=cmangos/include* \
-  --exclude=cmangos/lib* \
-  --exclude=cmangos/share* \
-  --chown=$CMANGOS_USER_NAME:$CMANGOS_GROUP_NAME \
-  /opt /opt
+# builds when the system lacks them, which our Docker image does not need. The
+# build stage removes these directories before this portable cross-stage copy;
+# `COPY --exclude` is unavailable in older Docker CE/BuildKit versions.
+COPY --from=build --chown=$CMANGOS_USER_NAME:$CMANGOS_GROUP_NAME /opt /opt
 
 COPY --chmod=755 ./docker/server/docker-cmd-mangosd.sh /usr/local/bin/mangosd
 COPY --chmod=755 ./docker/server/docker-cmd-realmd.sh /usr/local/bin/realmd
