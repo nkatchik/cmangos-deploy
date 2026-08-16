@@ -102,12 +102,12 @@ expect_equal \
 expect_equal \
   "all four Edge of Madness bosses are equally eligible" \
   4 \
-  "SELECT COUNT(*) FROM dbscript_random_templates WHERE id=999904 AND type=1 AND target_id IN (99990401,99990402,99990403,99990404) AND chance=0;"
+  "SELECT COUNT(*) FROM dbscript_random_templates WHERE id=999904 AND type=1 AND target_id IN (9999041,9999042,9999043,9999044) AND chance=0;"
 
 expect_equal \
   "each Edge of Madness choice summons exactly one boss" \
   4 \
-  "SELECT IF(COUNT(*)=4 AND COUNT(DISTINCT id)=4 AND COUNT(DISTINCT datalong)=4,4,0) FROM dbscripts_on_relay WHERE id IN (99990401,99990402,99990403,99990404) AND command=10 AND datalong IN (15082,15083,15084,15085) AND condition_id=0;"
+  "SELECT IF(COUNT(*)=4 AND COUNT(DISTINCT id)=4 AND COUNT(DISTINCT datalong)=4,4,0) FROM dbscripts_on_relay WHERE id IN (9999041,9999042,9999043,9999044) AND command=10 AND datalong IN (15082,15083,15084,15085) AND condition_id=0;"
 
 expect_equal \
   "the Edge of Madness calendar rotation is absent" \

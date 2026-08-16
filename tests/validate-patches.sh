@@ -69,10 +69,17 @@ rg -Fq 'SET `damage_multiplier` = 0.55,' \
   "$work_dir/database/Updates/9999_custom_03_lower_raid_damage.sql"
 edge_of_madness_sql="$work_dir/database/Updates/9999_custom_04_random_edge_of_madness.sql"
 rg -Fq '(180327, 5000, 0, 45, 0, 999904' "$edge_of_madness_sql"
-edge_random_choices=$(rg -c '^    \(999904, 1, 9999040[1-4], 0,' "$edge_of_madness_sql")
+edge_random_choices=$(rg -c '^    \(999904, 1, 999904[1-4], 0,' "$edge_of_madness_sql")
 [[ "$edge_random_choices" -eq 4 ]]
-edge_boss_summons=$(rg -c '^    \(9999040[1-4], 0, 0, 10, 1508[2-5], 259200,' "$edge_of_madness_sql")
+edge_boss_summons=$(rg -c '^    \(999904[1-4], 0, 0, 10, 1508[2-5], 259200,' "$edge_of_madness_sql")
 [[ "$edge_boss_summons" -eq 4 ]]
+while IFS= read -r relay_id; do
+  [[ "$relay_id" -le 16777215 ]]
+done < <(
+  sed -nE \
+    's/^    \(([0-9]+), 0, 0, 10, 1508[2-5], 259200,.*/\1/p' \
+    "$edge_of_madness_sql"
+)
 rg -Fq 'DELETE FROM `game_event` WHERE `entry` IN (29, 30, 31, 32);' "$edge_of_madness_sql"
 rg -Fq 'DELETE FROM `conditions` WHERE `condition_entry` IN (6029, 6030, 6031, 6032);' "$edge_of_madness_sql"
 rg -q 'customRaidTargetPlayers' "$work_dir/playerbots/playerbot/strategy/actions/InviteToGroupAction.cpp"
