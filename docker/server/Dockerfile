@@ -28,6 +28,13 @@ ARG CMANGOS_FAIL_ON_PATCH_ERROR
 COPY --chmod=755 ./docker/apply-patches.sh /usr/local/bin/apply-cmangos-patches
 COPY ./patches /build/local-patches
 
+# Windows Git checkouts may put CRLF endings in files sent through the Docker
+# build context. Normalize executable scripts and patches inside the Linux
+# image so existing checkouts keep working after this repository adds LF rules.
+RUN \
+  sed -i 's/\r$//' /usr/local/bin/apply-cmangos-patches && \
+  find /build/local-patches -type f -name '*.patch' -exec sed -i 's/\r$//' {} +
+
 RUN \
   apt update && \
   apt install -y --no-install-recommends \
@@ -179,6 +186,10 @@ COPY --chmod=755 ./docker/server/docker-cmd-realmd.sh /usr/local/bin/realmd
 COPY --chmod=755 ./docker/server/docker-cmd-extract-client-data.sh /usr/local/bin/extract-client-data
 
 RUN \
+  sed -i 's/\r$//' \
+    /usr/local/bin/mangosd \
+    /usr/local/bin/realmd \
+    /usr/local/bin/extract-client-data && \
   chmod +x /opt/cmangos/bin/* && \
   if [ -d /opt/cmangos/bin/tools ]; then \
     find /opt/cmangos/bin/tools -type f ! -name '*.txt' -exec chmod +x {} +; \

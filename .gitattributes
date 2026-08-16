@@ -1,5 +1,7 @@
 *.conf linguist-language=INI
 *.conf.example linguist-language=INI whitespace=cr-at-eol
-*.patch whitespace=-blank-at-eol
+*.patch text eol=lf whitespace=-blank-at-eol
+*.sh text eol=lf
+docker/**/Dockerfile text eol=lf
 *.sql.example linguist-language=SQL
 compose*.yaml.example linguist-language=YAML

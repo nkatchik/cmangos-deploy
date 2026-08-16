@@ -29,6 +29,13 @@ ARG CMANGOS_FAIL_ON_PATCH_ERROR
 COPY --chmod=755 ./docker/apply-patches.sh /usr/local/bin/apply-cmangos-patches
 COPY ./patches /build/local-patches
 
+# Windows Git checkouts may put CRLF endings in files sent through the Docker
+# build context. Normalize executable scripts and patches inside the Linux
+# image so existing checkouts keep working after this repository adds LF rules.
+RUN \
+  sed -i 's/\r$//' /usr/local/bin/apply-cmangos-patches && \
+  find /build/local-patches -type f -name '*.patch' -exec sed -i 's/\r$//' {} +
+
 RUN \
   apt update && \
   apt install -y --no-install-recommends \
@@ -110,6 +117,15 @@ COPY --chmod=755 ./docker/database/healthcheck.sh /usr/local/bin/cmangos-healthc
 COPY --chmod=755 ./docker/database/cmangos-confirm-changes.sh /usr/local/bin/cmangos-confirm-changes
 
 COPY --chmod=755 ./docker/database/docker-entrypoint.sh /entrypoint.sh
+
+RUN \
+  sed -i 's/\r$//' \
+    /opt/scripts/db-functions.sh \
+    /docker-entrypoint-initdb.d/create-db.sh \
+    /always-initdb.d/update-db.sh \
+    /usr/local/bin/cmangos-healthcheck \
+    /usr/local/bin/cmangos-confirm-changes \
+    /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["mariadbd"]
