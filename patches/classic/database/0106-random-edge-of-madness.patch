@@ -27,13 +27,13 @@ index 00000000..1b6f9914
 +INSERT INTO `dbscript_random_templates`
 +    (`id`, `type`, `target_id`, `chance`, `comments`)
 +VALUES
-+    (999904, 1, 99990401, 0, 'Edge of Madness - Gri''lek'),
-+    (999904, 1, 99990402, 0, 'Edge of Madness - Hazza''rah'),
-+    (999904, 1, 99990403, 0, 'Edge of Madness - Renataki'),
-+    (999904, 1, 99990404, 0, 'Edge of Madness - Wushoolay');
++    (999904, 1, 9999041, 0, 'Edge of Madness - Gri''lek'),
++    (999904, 1, 9999042, 0, 'Edge of Madness - Hazza''rah'),
++    (999904, 1, 9999043, 0, 'Edge of Madness - Renataki'),
++    (999904, 1, 9999044, 0, 'Edge of Madness - Wushoolay');
 +
 +DELETE FROM `dbscripts_on_relay`
-+WHERE `id` BETWEEN 99990401 AND 99990404;
++WHERE `id` BETWEEN 9999041 AND 9999044;
 +
 +INSERT INTO `dbscripts_on_relay`
 +    (`id`, `delay`, `priority`, `command`, `datalong`, `datalong2`, `datalong3`,
@@ -41,10 +41,10 @@ index 00000000..1b6f9914
 +     `dataint3`, `dataint4`, `datafloat`, `x`, `y`, `z`, `o`, `speed`,
 +     `condition_id`, `comments`)
 +VALUES
-+    (99990401, 0, 0, 10, 15082, 259200, 0, 0, 0, 0, 0, 0, 0, 0, 0, -11901.3, -1906.52, 65.36, 0.87, 0, 0, 'Edge of Madness - summon Gri''lek'),
-+    (99990402, 0, 0, 10, 15083, 259200, 0, 0, 0, 0, 0, 0, 0, 0, 0, -11901.3, -1906.52, 65.36, 0.87, 0, 0, 'Edge of Madness - summon Hazza''rah'),
-+    (99990403, 0, 0, 10, 15084, 259200, 0, 0, 0, 0, 0, 0, 0, 0, 0, -11901.3, -1906.52, 65.36, 0.87, 0, 0, 'Edge of Madness - summon Renataki'),
-+    (99990404, 0, 0, 10, 15085, 259200, 0, 0, 0, 0, 0, 0, 0, 0, 0, -11901.3, -1906.52, 65.36, 0.87, 0, 0, 'Edge of Madness - summon Wushoolay');
++    (9999041, 0, 0, 10, 15082, 259200, 0, 0, 0, 0, 0, 0, 0, 0, 0, -11901.3, -1906.52, 65.36, 0.87, 0, 0, 'Edge of Madness - summon Gri''lek'),
++    (9999042, 0, 0, 10, 15083, 259200, 0, 0, 0, 0, 0, 0, 0, 0, 0, -11901.3, -1906.52, 65.36, 0.87, 0, 0, 'Edge of Madness - summon Hazza''rah'),
++    (9999043, 0, 0, 10, 15084, 259200, 0, 0, 0, 0, 0, 0, 0, 0, 0, -11901.3, -1906.52, 65.36, 0.87, 0, 0, 'Edge of Madness - summon Renataki'),
++    (9999044, 0, 0, 10, 15085, 259200, 0, 0, 0, 0, 0, 0, 0, 0, 0, -11901.3, -1906.52, 65.36, 0.87, 0, 0, 'Edge of Madness - summon Wushoolay');
 +
 +-- These four events and their conditions existed only to select the Brazier
 +-- boss. Remove the inert calendar rotation after detaching the summon script.
