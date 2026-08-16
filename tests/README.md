@@ -18,6 +18,13 @@ the pinned binary contains the PlayerBots command-line integration:
 tests/validate-server-image.sh
 ```
 
+Check that Windows Git checkouts retain LF rules and that both Docker images
+normalize CRLF files from an existing build context:
+
+```sh
+tests/validate-windows-build-context.sh
+```
+
 After starting the custom Classic Compose stack, run the live database gate:
 
 ```sh
