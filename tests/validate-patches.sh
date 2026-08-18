@@ -51,6 +51,7 @@ test -f "$work_dir/database/Updates/9999_custom_01_five_character_instance_caps.
 test -f "$work_dir/database/Updates/9999_custom_02_tiered_raid_tuning.sql"
 test -f "$work_dir/database/Updates/9999_custom_03_lower_raid_damage.sql"
 test -f "$work_dir/database/Updates/9999_custom_04_random_edge_of_madness.sql"
+test -f "$work_dir/database/Updates/9999_custom_05_conservative_raid_scaling.sql"
 test -f "$work_dir/database/Updates/Instances/999_disable_post_1_8_4_raids.sql"
 test -f "$work_dir/playerbots/playerbot/strategy/generic/ZulGurubDungeonStrategies.h"
 
@@ -67,6 +68,11 @@ rg -Fq 'WHERE `map_id` IN (249, 409, 469);' \
   "$work_dir/database/Updates/9999_custom_03_lower_raid_damage.sql"
 rg -Fq 'SET `damage_multiplier` = 0.55,' \
   "$work_dir/database/Updates/9999_custom_03_lower_raid_damage.sql"
+conservative_scaling_sql="$work_dir/database/Updates/9999_custom_05_conservative_raid_scaling.sql"
+rg -Fq 'SET `health_multiplier` = 0.10,' "$conservative_scaling_sql"
+rg -Fq 'SET `health_multiplier` = 0.15,' "$conservative_scaling_sql"
+world_add_scaling_rows=$(rg -c '^  \([01], 15(224|260|261|302), 5, 0.15, 0.30,' "$conservative_scaling_sql")
+[[ "$world_add_scaling_rows" -eq 8 ]]
 edge_of_madness_sql="$work_dir/database/Updates/9999_custom_04_random_edge_of_madness.sql"
 rg -Fq '(180327, 5000, 0, 45, 0, 999904' "$edge_of_madness_sql"
 edge_random_choices=$(rg -c '^    \(999904, 1, 999904[1-4], 0,' "$edge_of_madness_sql")

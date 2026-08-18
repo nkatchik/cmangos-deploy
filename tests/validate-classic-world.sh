@@ -67,17 +67,17 @@ expect_equal \
 expect_equal \
   "retained raid trash uses isolated-elite calibration" \
   4 \
-  "SELECT COUNT(*) FROM custom_raid_scaling WHERE creature_id=0 AND ((map_id IN (249,409,469) AND health_multiplier<=0.1201 AND damage_multiplier<=0.4001) OR (map_id=309 AND health_multiplier<=0.2201 AND damage_multiplier<=0.4501));"
+  "SELECT COUNT(*) FROM custom_raid_scaling WHERE creature_id=0 AND ((map_id IN (249,409,469) AND ABS(health_multiplier-0.10)<0.0001 AND ABS(damage_multiplier-0.25)<0.0001) OR (map_id=309 AND ABS(health_multiplier-0.15)<0.0001 AND ABS(damage_multiplier-0.30)<0.0001));"
 
 expect_equal \
   "retained raid bosses keep extra health without higher per-hit damage" \
   4 \
-  "SELECT COUNT(*) FROM custom_raid_scaling WHERE creature_id=0 AND boss_health_multiplier>health_multiplier AND ((map_id IN (249,409,469) AND ABS(damage_multiplier-0.40)<0.0001 AND ABS(boss_damage_multiplier-0.40)<0.0001) OR (map_id=309 AND ABS(damage_multiplier-0.45)<0.0001 AND ABS(boss_damage_multiplier-0.45)<0.0001));"
+  "SELECT COUNT(*) FROM custom_raid_scaling WHERE creature_id=0 AND boss_health_multiplier>health_multiplier AND ((map_id IN (249,409,469) AND ABS(boss_health_multiplier-0.15)<0.0001 AND ABS(damage_multiplier-0.25)<0.0001 AND ABS(boss_damage_multiplier-0.25)<0.0001) OR (map_id=309 AND ABS(boss_health_multiplier-0.25)<0.0001 AND ABS(damage_multiplier-0.30)<0.0001 AND ABS(boss_damage_multiplier-0.30)<0.0001));"
 
 expect_equal \
   "retained raid encounter overrides use the safer damage ceiling" \
   0 \
-  "SELECT COUNT(*) FROM custom_raid_scaling WHERE creature_id<>0 AND map_id IN (249,309,409,469) AND NOT ((map_id IN (249,409,469) AND ABS(damage_multiplier-0.40)<0.0001 AND ABS(boss_damage_multiplier-0.40)<0.0001) OR (map_id=309 AND ABS(damage_multiplier-0.45)<0.0001 AND ABS(boss_damage_multiplier-0.45)<0.0001));"
+  "SELECT COUNT(*) FROM custom_raid_scaling WHERE creature_id<>0 AND map_id IN (249,309,409,469) AND NOT ((map_id IN (249,409,469) AND ABS(health_multiplier-0.15)<0.0001 AND ABS(damage_multiplier-0.25)<0.0001 AND ABS(boss_health_multiplier-0.15)<0.0001 AND ABS(boss_damage_multiplier-0.25)<0.0001) OR (map_id=309 AND ABS(health_multiplier-0.25)<0.0001 AND ABS(damage_multiplier-0.30)<0.0001 AND ABS(boss_health_multiplier-0.25)<0.0001 AND ABS(boss_damage_multiplier-0.30)<0.0001));"
 
 expect_equal \
   "LBRS keeps native creature stats while enabling Blackrock Spire mechanics" \
@@ -87,12 +87,17 @@ expect_equal \
 expect_equal \
   "UBRS creatures have explicit five-character scaling" \
   26 \
-  "SELECT COUNT(*) FROM custom_raid_scaling WHERE map_id=229 AND creature_id<>0 AND calibration_players=5 AND ABS(health_multiplier-0.55)<0.0001 AND ABS(damage_multiplier-0.55)<0.0001 AND ABS(boss_damage_multiplier-0.55)<0.0001;"
+  "SELECT COUNT(*) FROM custom_raid_scaling WHERE map_id=229 AND creature_id<>0 AND calibration_players=5 AND ABS(health_multiplier-0.55)<0.0001 AND ABS(damage_multiplier-0.40)<0.0001 AND ABS(boss_damage_multiplier-0.40)<0.0001;"
 
 expect_equal \
   "pre-cutoff world bosses use the safer damage ceiling" \
   10 \
-  "SELECT COUNT(*) FROM custom_raid_scaling WHERE ((map_id=0 AND creature_id=12397) OR (map_id=1 AND creature_id=6109) OR (map_id IN (0,1) AND creature_id IN (14887,14888,14889,14890))) AND ABS(damage_multiplier-0.40)<0.0001 AND ABS(boss_damage_multiplier-0.40)<0.0001;"
+  "SELECT COUNT(*) FROM custom_raid_scaling WHERE ((map_id=0 AND creature_id=12397) OR (map_id=1 AND creature_id=6109) OR (map_id IN (0,1) AND creature_id IN (14887,14888,14889,14890))) AND ABS(health_multiplier-0.15)<0.0001 AND ABS(damage_multiplier-0.30)<0.0001 AND ABS(boss_health_multiplier-0.15)<0.0001 AND ABS(boss_damage_multiplier-0.30)<0.0001;"
+
+expect_equal \
+  "Emerald Dragon encounter adds inherit outdoor scaling" \
+  8 \
+  "SELECT COUNT(*) FROM custom_raid_scaling WHERE map_id IN (0,1) AND creature_id IN (15224,15260,15261,15302) AND calibration_players=5 AND ABS(health_multiplier-0.15)<0.0001 AND ABS(damage_multiplier-0.30)<0.0001;"
 
 expect_equal \
   "the Brazier of Madness starts one random relay" \

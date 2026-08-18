@@ -1,0 +1,78 @@
+diff --git a/Updates/9999_custom_05_conservative_raid_scaling.sql b/Updates/9999_custom_05_conservative_raid_scaling.sql
+new file mode 100644
+index 00000000..e27c8e65
+--- /dev/null
++++ b/Updates/9999_custom_05_conservative_raid_scaling.sql
+@@ -0,0 +1,72 @@
++-- Final conservative calibration for five-character content. Prefer a short,
++-- recoverable encounter over preserving the original raid's per-player burden.
++-- Scripted encounter patches still reduce lethal mechanics and add floods; this
++-- migration is the safety net for ordinary attacks and DB-only abilities.
++
++UPDATE `custom_raid_scaling`
++SET `health_multiplier` = 0.10,
++    `damage_multiplier` = 0.25,
++    `boss_health_multiplier` = 0.15,
++    `boss_damage_multiplier` = 0.25,
++    `comment` = CONCAT(`comment`, '; conservative five-character calibration')
++WHERE `map_id` IN (249, 409, 469)
++  AND `creature_id` = 0;
++
++UPDATE `custom_raid_scaling`
++SET `health_multiplier` = 0.15,
++    `damage_multiplier` = 0.30,
++    `boss_health_multiplier` = 0.25,
++    `boss_damage_multiplier` = 0.30,
++    `comment` = CONCAT(`comment`, '; conservative five-character calibration')
++WHERE `map_id` = 309
++  AND `creature_id` = 0;
++
++-- Creature-specific raid rows are bosses. Keep them at or below the map-level
++-- boss budget so old overrides cannot silently restore larger health pools.
++UPDATE `custom_raid_scaling`
++SET `health_multiplier` = 0.15,
++    `damage_multiplier` = 0.25,
++    `boss_health_multiplier` = 0.15,
++    `boss_damage_multiplier` = 0.25
++WHERE `map_id` IN (249, 409, 469)
++  AND `creature_id` <> 0;
++
++UPDATE `custom_raid_scaling`
++SET `health_multiplier` = 0.25,
++    `damage_multiplier` = 0.30,
++    `boss_health_multiplier` = 0.25,
++    `boss_damage_multiplier` = 0.30
++WHERE `map_id` = 309
++  AND `creature_id` <> 0;
++
++-- LBRS remains native. Only the explicit UBRS rows receive the lower damage
++-- ceiling; their existing 0.55 health budget remains suitable for five people.
++UPDATE `custom_raid_scaling`
++SET `damage_multiplier` = 0.40,
++    `boss_damage_multiplier` = 0.40
++WHERE `map_id` = 229
++  AND `creature_id` <> 0;
++
++-- Outdoor maps have no map-wide scaling because ordinary world creatures must
++-- remain untouched. Scale retained world bosses and their encounter adds by ID.
++UPDATE `custom_raid_scaling`
++SET `health_multiplier` = 0.15,
++    `damage_multiplier` = 0.30,
++    `boss_health_multiplier` = 0.15,
++    `boss_damage_multiplier` = 0.30
++WHERE (`map_id` = 0 AND `creature_id` = 12397)
++   OR (`map_id` = 1 AND `creature_id` = 6109)
++   OR (`map_id` IN (0, 1) AND `creature_id` IN (14887, 14888, 14889, 14890));
++
++INSERT INTO `custom_raid_scaling`
++  (`map_id`, `creature_id`, `calibration_players`, `health_multiplier`, `damage_multiplier`,
++   `boss_health_multiplier`, `boss_damage_multiplier`, `comment`)
++VALUES
++  (0, 15224, 5, 0.15, 0.30, 0.15, 0.30, 'Dream Fog encounter add'),
++  (1, 15224, 5, 0.15, 0.30, 0.15, 0.30, 'Dream Fog encounter add'),
++  (0, 15260, 5, 0.15, 0.30, 0.15, 0.30, 'Ysondre Demented Druid Spirit'),
++  (1, 15260, 5, 0.15, 0.30, 0.15, 0.30, 'Ysondre Demented Druid Spirit'),
++  (0, 15261, 5, 0.15, 0.30, 0.15, 0.30, 'Lethon Spirit Shade'),
++  (1, 15261, 5, 0.15, 0.30, 0.15, 0.30, 'Lethon Spirit Shade'),
++  (0, 15302, 5, 0.15, 0.30, 0.15, 0.30, 'Shade of Taerar'),
++  (1, 15302, 5, 0.15, 0.30, 0.15, 0.30, 'Shade of Taerar');
