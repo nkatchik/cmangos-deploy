@@ -73,6 +73,13 @@ rg -Fq 'GetMechanicCount(m_creature->GetMapId(), NB_ADDS_IN_SUBMERGE, 2)' "$work
 [[ "$(rg -c 'SummonCreature\(NPC_BAT_RIDER' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_jeklik.cpp")" -eq 1 ]]
 ! rg -q 'DoCastSpellIfCan\(nullptr, SPELL_LEVEL_UP' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_mandokir.cpp"
 [[ "$(rg -c 'ResetTimer\(ACTION_RESSURECTION, 30000\)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_thekal.cpp")" -eq 3 ]]
+! rg -q 'DoCastSpellIfCan\(m_creature, SPELL_CAPTURESOUL' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/boss_kazzak.cpp"
+! rg -q 'DoCastSpellIfCan\(pTarget, SPELL_MARK_OF_KAZZAK' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/boss_kazzak.cpp"
+! rg -q 'SPELL_MARK_OF_FROST_PLAYER, TRIGGERED' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/kalimdor/boss_azuregos.cpp"
+emerald_dragons="$work_dir/core/src/game/AI/ScriptDevAI/scripts/world/bosses_emerald_dragons.cpp"
+rg -Fq 'm_uiSpiritShadesSummoned >= 3' "$emerald_dragons"
+rg -Fq 'if (m_uiShadesDead == 2)' "$emerald_dragons"
+rg -Fq 'if (m_uiEventCounter > 1)' "$emerald_dragons"
 rg -q 'WHERE `map` IN \(509, 531, 533\)' "$work_dir/database/Updates/9998_disable_post_1_8_4_progression.sql"
 rg -Fq "(229, 10899, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Goraluk Anvilcrack');" \
   "$work_dir/database/Updates/9999_custom_02_tiered_raid_tuning.sql"
