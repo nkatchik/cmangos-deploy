@@ -59,6 +59,12 @@ rg -q 'Custom\.RaidScaling\.TargetPlayers' "$work_dir/core/src/mangosd/mangosd.c
 rg -q 'boss_health_multiplier, boss_damage_multiplier' "$work_dir/core/src/game/Globals/CustomRaidScaling.cpp"
 rg -q 'creatureDealer->IsWorldBoss' "$work_dir/core/src/game/Entities/Unit.cpp"
 rg -Fq 'GetMechanicCount(instance->GetId(), MAX_STADIUM_MOBS_PER_WAVE, 3)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackrock_spire/instance_blackrock_spire.cpp"
+rg -Fq 'GetMechanicCount(instance->GetId(), uint32(m_lIncarceratorGUIDList.size()), 4)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackrock_spire/instance_blackrock_spire.cpp"
+rg -Fq 'GetMechanicCount(instance->GetId(), 6, 4)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackrock_spire/instance_blackrock_spire.cpp"
+onyxia_script="$work_dir/core/src/game/AI/ScriptDevAI/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp"
+rg -Fq 'GetMechanicCount(m_creature->GetMapId(), 20, 4)' "$onyxia_script"
+rg -Fq 'GetMechanicCount(m_creature->GetMapId(), 4, 2)' "$onyxia_script"
+rg -Fq 'GetMechanicCount(m_creature->GetMapId(), 10, 3)' "$onyxia_script"
 rg -Fq 'MAX_EGGS_DEFENDERS          = 1' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.h"
 rg -Fq 'GetMechanicCount(instance->GetId(), MAX_DRAKONID_SUMMONS, 6)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.cpp"
 rg -Fq 'AddCombatAction(VAEL_BURNING_ADRENALINE_TANK, true)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_vaelastrasz.cpp"
@@ -91,7 +97,12 @@ rg -Fq 'SET `damage_multiplier` = 0.55,' \
   "$work_dir/database/Updates/9999_custom_03_lower_raid_damage.sql"
 conservative_scaling_sql="$work_dir/database/Updates/9999_custom_05_conservative_raid_scaling.sql"
 rg -Fq 'SET `health_multiplier` = 0.10,' "$conservative_scaling_sql"
-rg -Fq 'SET `health_multiplier` = 0.15,' "$conservative_scaling_sql"
+rg -Fq 'WHERE `map_id` IN (249, 409, 469)' "$conservative_scaling_sql"
+rg -Fq 'WHERE `map_id` = 309' "$conservative_scaling_sql"
+rg -Fq 'SET `damage_multiplier` = 0.40,' "$conservative_scaling_sql"
+rg -Fq 'WHERE `map_id` = 229' "$conservative_scaling_sql"
+retained_world_bosses='`creature_id` IN (14887, 14888, 14889, 14890)'
+rg -Fq "$retained_world_bosses" "$conservative_scaling_sql"
 world_add_scaling_rows=$(rg -c '^  \([01], 15(224|260|261|302), 5, 0.15, 0.30,' "$conservative_scaling_sql")
 [[ "$world_add_scaling_rows" -eq 8 ]]
 edge_of_madness_sql="$work_dir/database/Updates/9999_custom_04_random_edge_of_madness.sql"

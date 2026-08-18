@@ -59,11 +59,11 @@ execution, kill, loot, and lockout/progression state.
 
 | Instance | Representative gate | Specific observations |
 | -------- | ------------------- | --------------------- |
-| Upper Blackrock Spire | Emberseer, Rend, and Drakkisath | Confirm four active incarcerators, three active Stadium enemies per wave, four Flamewreath waves, boss/guard targeting, kill, loot, and saved instance. Also confirm a Lower Blackrock Spire run retains native creature strength. |
+| Upper Blackrock Spire | Emberseer, Rend, and Drakkisath | Confirm four active incarcerators, three active Stadium enemies per wave, four Flamewreath waves, boss/guard targeting, kill, loot, and saved instance. Also confirm a Lower Blackrock Spire run retains native creature strength. UBRS creature damage is capped at 40%. |
 | Onyxia's Lair | Onyxia | Confirm four first-wave whelps, two-to-three later whelps, ranged positioning during flight, fear recovery, kill, loot, and resettable instance progress. |
-| Molten Core | Majordomo and Ragnaros | Confirm the mixed four-add Majordomo pack, crowd control/dispels, three Sons of Flame, submerge/emerge progression, loot, and resettable instance progress. |
-| Blackwing Lair | Razorgore and Nefarian | Confirm phase transition at eight eggs and ten drakonid kills, orb/add targeting, class-call handling, kill, loot, and instance progression. Separately exercise Suppression Room and Chromaggus dispels. |
-| Zul'Gurub | Edge of Madness, Renataki, and Hakkar | Confirm the Brazier summons exactly one of the four Edge of Madness bosses, cannot reroll in the same live instance, and becomes available after reset. Also confirm Thousand Blades never targets more than three secondary players, automatic ZG strategy activation, poison handling, add targeting, kill, loot, and resettable instance progress. |
+| Molten Core | Garr, Sulfuron, Majordomo, and Ragnaros | Confirm Garr keeps at most three Firesworn, Sulfuron keeps two priests, Majordomo has three mixed adds, Ragnaros has two Sons of Flame, and every transition, kill, loot, and reset completes. |
+| Blackwing Lair | Razorgore, Vaelastrasz, the three drakes, and Nefarian | Confirm phase transition at eight eggs; Razorgore spawns one defender per 20 seconds with 2/6 live caps; Burning Adrenaline and drake threat wipes are absent; and Nefarian uses one tunnel, transitions after six drakonids, and does not class-call. Separately exercise Suppression Room and Chromaggus dispels. |
+| Zul'Gurub | Arlokk, Jeklik, Mandokir, Thekal, Hakkar, Edge of Madness, and Renataki | Confirm one Arlokk panther side, one Jeklik fire rider, no Mandokir level-up, a 30-second Thekal fake-death window, and no Hakkar healing from unpoisoned Blood Siphon. Confirm the Brazier picks exactly one boss and Renataki targets no more than three secondary players. |
 
 For the solo calibration, use a geared level-60 character without bots and pull
 one representative elite at a time in Upper Blackrock Spire, Onyxia's Lair,
@@ -81,11 +81,13 @@ failed mechanics may remain lethal. Effects implemented as explicit instakills
 bypass the general raid-damage multiplier and therefore require a separate
 encounter-specific check.
 
-Also run Azuregos, Lord Kazzak, and one Dragon of Nightmare in the open world.
-Check leash/terrain behavior, tank survival, healer mana, add handling, loot,
-and respawn/event state. The numerical policies and build are automated; this
-matrix is the required gameplay-balance qualification before calling every
-encounter production-balanced.
+Also run Azuregos, Lord Kazzak, and all four Dragons of Nightmare in the open
+world. Confirm deaths can be recovered without Frost/Nature marks, Kazzak does
+not use Capture Soul or Mark of Kazzak, Lethon creates at most three shades,
+Taerar creates two shades with a 30-second timeout, and Ysondre creates only one
+druid wave. Check leash/terrain behavior, tank survival, healer mana, add
+handling, loot, and respawn/event state. The numerical policies and build are
+automated; this matrix remains the gameplay qualification boundary.
 
 ## Raid reset runtime qualification
 

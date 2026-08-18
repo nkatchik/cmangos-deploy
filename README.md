@@ -35,10 +35,13 @@ No external patch repository is required.
 - Zul'Gurub's Edge of Madness has no calendar rotation. Each fresh instance
   rolls one of its four bosses when the Brazier of Madness is first used.
 - The default PlayerBots role template is one tank, one healer, and three DPS.
-- Raid-trash and boss health and damage budgets are independently data-driven
-  across every retained raid. The trash baseline targets a slow but feasible
-  isolated elite kill for a geared level-60 character; packs and bosses remain
-  five-character content.
+- The final calibration deliberately favors too easy over too hard. Molten
+  Core, Blackwing Lair, and Onyxia trash use 10% health and 25% damage; their
+  bosses use 15% health and 25% damage. Zul'Gurub uses 15% trash health, 25%
+  boss health, and 30% damage. Retained world bosses and adds use 15% health
+  and 30% damage. UBRS keeps its explicit 55% health budget but caps damage at
+  40%. A geared level-60 character should be able to defeat one isolated normal
+  elite in every retained raid; packs and bosses remain five-character content.
 - Encounter overrides cover roster-bound mechanics such as Upper Blackrock
   Spire's event waves, Onyxia's whelps, Ragnaros's sons, Razorgore's eggs, and
   Nefarian's phase-one kill count.
