@@ -68,6 +68,11 @@ rg -Fq 'if (kept++ >= 3)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/easter
 rg -Fq 'if (kept++ >= 2)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_sulfuron_harbinger.cpp"
 rg -Fq 'GetMechanicCount(pMajordomo->GetMapId(), MAX_MAJORDOMO_ADDS, 3)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/molten_core.cpp"
 rg -Fq 'GetMechanicCount(m_creature->GetMapId(), NB_ADDS_IN_SUBMERGE, 2)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_ragnaros.cpp"
+! rg -q 'SelectRandomPantherTrigger\(false\)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_arlokk.cpp"
+! rg -q '24321\) \? 24323 : 24322' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_hakkar.cpp"
+[[ "$(rg -c 'SummonCreature\(NPC_BAT_RIDER' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_jeklik.cpp")" -eq 1 ]]
+! rg -q 'DoCastSpellIfCan\(nullptr, SPELL_LEVEL_UP' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_mandokir.cpp"
+[[ "$(rg -c 'ResetTimer\(ACTION_RESSURECTION, 30000\)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_thekal.cpp")" -eq 3 ]]
 rg -q 'WHERE `map` IN \(509, 531, 533\)' "$work_dir/database/Updates/9998_disable_post_1_8_4_progression.sql"
 rg -Fq "(229, 10899, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Goraluk Anvilcrack');" \
   "$work_dir/database/Updates/9999_custom_02_tiered_raid_tuning.sql"

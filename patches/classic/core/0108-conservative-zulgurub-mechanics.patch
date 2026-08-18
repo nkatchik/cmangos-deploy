@@ -1,0 +1,112 @@
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_arlokk.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_arlokk.cpp
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_arlokk.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_arlokk.cpp
+@@ -102,6 +102,8 @@ struct boss_arlokkAI : public CombatAI
+     {
+         CombatAI::Reset();
+ 
++        m_pTrigger1 = nullptr;
++        m_pTrigger2 = nullptr;
+         m_bIsPhaseTwo = false;
+ 
+         SetCombatScriptStatus(false);
+@@ -117,9 +119,7 @@ struct boss_arlokkAI : public CombatAI
+         if (m_pTrigger1)
+             m_pTrigger1->CastSpell(m_pTrigger1, SPELL_SUMMON_ZULIAN_PROWLERS, TRIGGERED_NONE);
+ 
+-        m_pTrigger2 = m_instance->SelectRandomPantherTrigger(false);
+-        if (m_pTrigger2)
+-            m_pTrigger2->CastSpell(m_pTrigger2, SPELL_SUMMON_ZULIAN_PROWLERS, TRIGGERED_NONE);
++        // One summoning side is enough pressure for a five-character group.
+     }
+ 
+     void JustReachedHome() override
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_hakkar.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_hakkar.cpp
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_hakkar.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_hakkar.cpp
+@@ -123,7 +123,10 @@ struct BloodSiphon : public SpellScript
+             return;
+ 
+         Unit* target = spell->GetUnitTarget();
+-        target->CastSpell(spell->GetCaster(), target->HasAura(24321) ? 24323 : 24322, TRIGGERED_OLD_TRIGGERED);
++        // Poisoned blood still damages Hakkar, but missing the poison no longer
++        // heals him and traps a bot-led five-character group in a reset loop.
++        if (target->HasAura(24321))
++            target->CastSpell(spell->GetCaster(), 24323, TRIGGERED_OLD_TRIGGERED);
+     }
+ };
+ 
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_jeklik.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_jeklik.cpp
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_jeklik.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_jeklik.cpp
+@@ -215,23 +215,12 @@ struct boss_jeklikAI : public CombatAI
+             case JEKLIK_PHASE_BATS:
+                 if (m_creature->GetHealthPercent() < 35.0f)
+                 {
+-                    // TODO: check if more positions exist
+-                    const std::vector<Position> positions =
++                    Position const pos = {-12301.69f, -1371.292f, 145.0924f, 4.747295f};
++                    if (Creature* bat = m_creature->SummonCreature(NPC_BAT_RIDER, pos.x, pos.y, pos.z, 0, TEMPSPAWN_DEAD_DESPAWN, 0))
+                     {
+-                        {-12298.03f, -1368.506f, 145.3976f, 4.799655f}, // waits 15 sec
+-                        {-12301.69f, -1371.292f, 145.0924f, 4.747295f},
+-                    };
+-
+-                    Position const& pos1 = positions[0];
+-                    Creature* bat = m_creature->SummonCreature(NPC_BAT_RIDER, pos1.x, pos1.y, pos1.z, 0, TEMPSPAWN_DEAD_DESPAWN, 0);
+-                    bat->GetMotionMaster()->MoveIdle();
+-                    m_delayedBat = bat->GetObjectGuid();
+-                    ResetTimer(JEKLIK_DELAYED_BAT, 15000);
+-
+-                    Position const& pos2 = positions[1];
+-                    bat = m_creature->SummonCreature(NPC_BAT_RIDER, pos2.x, pos2.y, pos2.z, 0, TEMPSPAWN_DEAD_DESPAWN, 0);
+-                    bat->CastSpell(nullptr, SPELL_LIQUID_FIRE, TRIGGERED_OLD_TRIGGERED);
+-                    bat->GetMotionMaster()->MovePath(1);
++                        bat->CastSpell(nullptr, SPELL_LIQUID_FIRE, TRIGGERED_OLD_TRIGGERED);
++                        bat->GetMotionMaster()->MovePath(1);
++                    }
+ 
+                     DoScriptText(SAY_RAIN_FIRE, m_creature);
+                     DisableCombatAction(action);
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_mandokir.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_mandokir.cpp
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_mandokir.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_mandokir.cpp
+@@ -197,7 +197,7 @@ struct boss_mandokirAI : public CombatAI
+                     }
+                 }
+ 
+-                DoCastSpellIfCan(nullptr, SPELL_LEVEL_UP, CAST_TRIGGERED);
++                // Do not let recoverable deaths snowball into an overtuned boss.
+                 m_uiKillCount = 0;
+             }
+ 
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_thekal.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_thekal.cpp
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_thekal.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/zulgurub/boss_thekal.cpp
+@@ -265,7 +265,7 @@ struct boss_thekalAI : public boss_thekalBaseAI
+ 
+     void OnFakeingDeath() override
+     {
+-        ResetTimer(ACTION_RESSURECTION, 10000);
++        ResetTimer(ACTION_RESSURECTION, 30000);
+ 
+         if (m_instance)
+         {
+@@ -355,7 +355,7 @@ struct mob_zealot_lorkhanAI : public boss_thekalBaseAI
+ 
+     void OnFakeingDeath() override
+     {
+-        ResetTimer(ACTION_RESSURECTION, 10000);
++        ResetTimer(ACTION_RESSURECTION, 30000);
+ 
+         if (m_instance)
+             m_instance->SetData(TYPE_LORKHAN, SPECIAL);
+@@ -404,7 +404,7 @@ struct mob_zealot_zathAI : public boss_thekalBaseAI
+ 
+     void OnFakeingDeath() override
+     {
+-        ResetTimer(ACTION_RESSURECTION, 10000);
++        ResetTimer(ACTION_RESSURECTION, 30000);
+ 
+         if (m_instance)
+             m_instance->SetData(TYPE_ZATH, SPECIAL);
