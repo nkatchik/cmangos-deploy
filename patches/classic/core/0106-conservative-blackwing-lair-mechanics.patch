@@ -1,0 +1,150 @@
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.h b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.h
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.h
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.h
+@@ -74,9 +74,9 @@ enum
+     SPELL_EXPLODE_ORB           = 20037,                    // used if attacked without destroying the eggs - triggers 20038
+     SPELL_POSSESS               = 19832,
+ 
+-    MAX_EGGS_DEFENDERS          = 4,
+-    MAX_DRAGONSPAWN             = 12,
+-    MAX_BLACKWING_DEFENDER      = 40,
++    MAX_EGGS_DEFENDERS          = 1,
++    MAX_DRAGONSPAWN             = 2,
++    MAX_BLACKWING_DEFENDER      = 6,
+ 
+     // Nefarian encounter
+     NPC_BLACK_SPAWNER           = 14307,
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.cpp
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.cpp
+@@ -412,7 +412,7 @@ void instance_blackwing_lair::OnCreatureDeath(Creature* pCreature)
+         case NPC_CHROMATIC_DRAKONID:
+             m_uiDeadDrakonidsCount++;
+             // If the requiered amount of drakonids are killed, start phase 2
+-            uint32 requiredDrakonids = sCustomRaidScalingMgr.GetMechanicCount(instance->GetId(), MAX_DRAKONID_SUMMONS, 10);
++            uint32 requiredDrakonids = sCustomRaidScalingMgr.GetMechanicCount(instance->GetId(), MAX_DRAKONID_SUMMONS, 6);
+             if (m_uiDeadDrakonidsCount >= requiredDrakonids && GetData(TYPE_NEFARIAN) == IN_PROGRESS)
+                 SetData(TYPE_NEFARIAN, SPECIAL);
+             break;
+@@ -589,8 +589,8 @@ void instance_blackwing_lair::Update(uint32 uiDiff)
+             if (!pGenerator)
+                 continue;
+ 
+-            // Defenders are spawned randomly, 4 at a time
+-            // There can be up to 12 Dragonspawns spawned and 40 Orcs (either mage or legionnaire)
++            // Defenders are spawned one at a time for the five-character event.
++            // There can be up to 2 Dragonspawns and 6 Orcs (either mage or legionnaire)
+             // If one of the cap is reached, only the remaining type of NPC is spawned until the second cap is also reached
+ 
+             uint32 uiSpellId = 0;                                                   // Hold the spell summoning the NPC defender for that generator
+@@ -616,7 +616,7 @@ void instance_blackwing_lair::Update(uint32 uiDiff)
+                 pGenerator->CastSpell(nullptr, uiSpellId, TRIGGERED_NONE);
+         }
+ 
+-        m_uiDefenseTimer = 15000;
++        m_uiDefenseTimer = 20000;
+     }
+     else
+         m_uiDefenseTimer -= uiDiff;
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_ebonroc.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_ebonroc.cpp
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_ebonroc.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_ebonroc.cpp
+@@ -74,12 +74,6 @@ struct boss_ebonrocAI : public CombatAI
+             m_instance->SetData(TYPE_EBONROC, FAIL);
+     }
+ 
+-    void SpellHitTarget(Unit* target, const SpellEntry* spellInfo, SpellMissInfo /*missInfo*/) override
+-    {
+-        if (spellInfo->Id == SPELL_WING_BUFFET) // reduces threat of everyone hit
+-            m_creature->getThreatManager().modifyThreatPercent(target, -50);
+-    }
+-
+     void ExecuteAction(uint32 action) override
+     {
+         switch (action)
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_firemaw.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_firemaw.cpp
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_firemaw.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_firemaw.cpp
+@@ -74,12 +74,6 @@ struct boss_firemawAI : public CombatAI
+             m_instance->SetData(TYPE_FIREMAW, FAIL);
+     }
+ 
+-    void SpellHitTarget(Unit* target, const SpellEntry* spellInfo, SpellMissInfo /*missInfo*/) override
+-    {
+-        if (spellInfo->Id == SPELL_WING_BUFFET) // reduces threat of everyone hit
+-            m_creature->getThreatManager().modifyThreatPercent(target, -50);
+-    }
+-
+     void ExecuteAction(uint32 action) override
+     {
+         switch (action)
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_flamegor.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_flamegor.cpp
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_flamegor.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_flamegor.cpp
+@@ -76,12 +76,6 @@ struct boss_flamegorAI : public CombatAI
+             m_instance->SetData(TYPE_FLAMEGOR, FAIL);
+     }
+ 
+-    void SpellHitTarget(Unit* target, const SpellEntry* spellInfo, SpellMissInfo /*missInfo*/) override
+-    {
+-        if (spellInfo->Id == SPELL_WING_BUFFET) // reduces threat of everyone hit
+-            m_creature->getThreatManager().modifyThreatPercent(target, -50);
+-    }
+-
+     void ExecuteAction(uint32 action) override
+     {
+         switch (action)
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_nefarian.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_nefarian.cpp
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_nefarian.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_nefarian.cpp
+@@ -99,6 +99,8 @@ struct boss_nefarianAI : public CombatAI
+         AddCombatAction(NEFARIAN_VEIL_OF_SHADOW, true);
+         AddCombatAction(NEFARIAN_CLEAVE, true);
+         AddCombatAction(NEFARIAN_TAIL_LASH, true);
++        // Several class calls remove a healer or spawn more enemies. Leave the
++        // action disabled for a group with no redundant roles.
+         AddCombatAction(NEFARIAN_CLASS_CALL, true);
+         AddCustomAction(NEFARIAN_INITIAL_YELL, true, [&]() { HandleInitialYell(); });
+         AddCustomAction(NEFARIAN_ATTACK_START, true, [&]() { HandleAttackStart(); });
+@@ -201,7 +203,6 @@ struct boss_nefarianAI : public CombatAI
+         ResetCombatAction(NEFARIAN_VEIL_OF_SHADOW, 15000u);
+         ResetCombatAction(NEFARIAN_CLEAVE, 7000u);
+         ResetCombatAction(NEFARIAN_TAIL_LASH, 10000u);
+-        ResetCombatAction(NEFARIAN_CLASS_CALL, 35000u);
+     }
+ 
+     void ExecuteAction(uint32 action) override
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_vaelastrasz.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_vaelastrasz.cpp
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_vaelastrasz.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_vaelastrasz.cpp
+@@ -83,8 +83,10 @@ struct boss_vaelastraszAI : public CombatAI
+     boss_vaelastraszAI(Creature* creature) : CombatAI(creature, VAEL_ACTION_MAX), m_instance(static_cast<ScriptedInstance*>(creature->GetInstanceData()))
+     {
+         AddTimerlessCombatAction(VAEL_LOW_HP_YELL, true);
+-        AddCombatAction(VAEL_BURNING_ADRENALINE_TANK, 45000u);
+-        AddCombatAction(VAEL_BURNING_ADRENALINE_TARGET, 15000u);
++        // Burning Adrenaline eventually kills its target. Losing even one role
++        // is too punitive for a five-character group, so keep both actions off.
++        AddCombatAction(VAEL_BURNING_ADRENALINE_TANK, true);
++        AddCombatAction(VAEL_BURNING_ADRENALINE_TARGET, true);
+         AddCombatAction(VAEL_FLAME_BREATH, 11000u);
+         AddCombatAction(VAEL_FIRE_NOVA, 5000u);
+         AddCombatAction(VAEL_CLEAVE, 8000u);
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_victor_nefarius.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_victor_nefarius.cpp
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_victor_nefarius.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_victor_nefarius.cpp
+@@ -130,13 +130,10 @@ struct boss_victor_nefariusAI : public CombatAI, private DialogueHelper
+             m_creature->SetInCombatWithZone();
+             SetCombatMovement(false); // Nefarius teleports via Shadowblink, he does not move
+ 
+-            // Spawn the two spawner NPCs that will handle the drakonids spawning (both brood and chromatic)
++            // Spawn one tunnel controller for a five-character phase-one wave.
+             if (m_instance)
+             {
+-                // Left
+                 m_creature->SummonCreature(m_instance->GetData(TYPE_NEFA_LTUNNEL), aNefarianLocs[0].x, aNefarianLocs[0].y, aNefarianLocs[0].z, 5.000f, TEMPSPAWN_TIMED_OOC_OR_CORPSE_DESPAWN, HOUR * IN_MILLISECONDS);
+-                // Right
+-                m_creature->SummonCreature(m_instance->GetData(TYPE_NEFA_RTUNNEL), aNefarianLocs[1].x, aNefarianLocs[1].y, aNefarianLocs[1].z, 5.000f, TEMPSPAWN_TIMED_OOC_OR_CORPSE_DESPAWN, HOUR * IN_MILLISECONDS);
+             }
+         }
+     }

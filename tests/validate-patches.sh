@@ -59,6 +59,11 @@ rg -q 'Custom\.RaidScaling\.TargetPlayers' "$work_dir/core/src/mangosd/mangosd.c
 rg -q 'boss_health_multiplier, boss_damage_multiplier' "$work_dir/core/src/game/Globals/CustomRaidScaling.cpp"
 rg -q 'creatureDealer->IsWorldBoss' "$work_dir/core/src/game/Entities/Unit.cpp"
 rg -Fq 'GetMechanicCount(instance->GetId(), MAX_STADIUM_MOBS_PER_WAVE, 3)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackrock_spire/instance_blackrock_spire.cpp"
+rg -Fq 'MAX_EGGS_DEFENDERS          = 1' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.h"
+rg -Fq 'GetMechanicCount(instance->GetId(), MAX_DRAKONID_SUMMONS, 6)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.cpp"
+rg -Fq 'AddCombatAction(VAEL_BURNING_ADRENALINE_TANK, true)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_vaelastrasz.cpp"
+! rg -q 'ResetCombatAction\(NEFARIAN_CLASS_CALL' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_nefarian.cpp"
+! rg -q 'modifyThreatPercent\(target, -50\)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_"{firemaw,ebonroc,flamegor}.cpp
 rg -q 'WHERE `map` IN \(509, 531, 533\)' "$work_dir/database/Updates/9998_disable_post_1_8_4_progression.sql"
 rg -Fq "(229, 10899, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Goraluk Anvilcrack');" \
   "$work_dir/database/Updates/9999_custom_02_tiered_raid_tuning.sql"
