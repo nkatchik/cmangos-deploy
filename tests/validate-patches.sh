@@ -64,6 +64,10 @@ rg -Fq 'GetMechanicCount(instance->GetId(), MAX_DRAKONID_SUMMONS, 6)' "$work_dir
 rg -Fq 'AddCombatAction(VAEL_BURNING_ADRENALINE_TANK, true)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_vaelastrasz.cpp"
 ! rg -q 'ResetCombatAction\(NEFARIAN_CLASS_CALL' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_nefarian.cpp"
 ! rg -q 'modifyThreatPercent\(target, -50\)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/blackwing_lair/boss_"{firemaw,ebonroc,flamegor}.cpp
+rg -Fq 'if (kept++ >= 3)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_garr.cpp"
+rg -Fq 'if (kept++ >= 2)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_sulfuron_harbinger.cpp"
+rg -Fq 'GetMechanicCount(pMajordomo->GetMapId(), MAX_MAJORDOMO_ADDS, 3)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/molten_core.cpp"
+rg -Fq 'GetMechanicCount(m_creature->GetMapId(), NB_ADDS_IN_SUBMERGE, 2)' "$work_dir/core/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_ragnaros.cpp"
 rg -q 'WHERE `map` IN \(509, 531, 533\)' "$work_dir/database/Updates/9998_disable_post_1_8_4_progression.sql"
 rg -Fq "(229, 10899, 5, 0.55, 0.70, 0.55, 0.70, 'UBRS Goraluk Anvilcrack');" \
   "$work_dir/database/Updates/9999_custom_02_tiered_raid_tuning.sql"

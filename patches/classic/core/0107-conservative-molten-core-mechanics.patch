@@ -1,0 +1,75 @@
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_garr.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_garr.cpp
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_garr.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_garr.cpp
+@@ -72,6 +72,17 @@ struct boss_garrAI : public CombatAI
+         if (m_instance)
+             m_instance->SetData(TYPE_GARR, IN_PROGRESS);
+ 
++        CreatureList firesworn;
++        GetCreatureListWithEntryInGrid(firesworn, m_creature, NPC_FIRESWORN, 100.0f);
++        uint32 kept = 0;
++        for (Creature* add : firesworn)
++        {
++            if (!add->IsAlive())
++                continue;
++            if (kept++ >= 3)
++                add->ForcedDespawn();
++        }
++
+         // Garr has a 100 yard aura to keep track of the distance of each of his adds, they will enrage if moved out of it
+         DoCastSpellIfCan(nullptr, SPELL_SEPARATION_ANXIETY, CAST_TRIGGERED | CAST_AURA_NOT_PRESENT);
+     }
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_sulfuron_harbinger.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_sulfuron_harbinger.cpp
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_sulfuron_harbinger.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_sulfuron_harbinger.cpp
+@@ -67,6 +67,17 @@ struct boss_sulfuronAI : public CombatAI
+     {
+         if (m_instance)
+             m_instance->SetData(TYPE_SULFURON, IN_PROGRESS);
++
++        CreatureList priests;
++        GetCreatureListWithEntryInGrid(priests, m_creature, NPC_FLAMEWAKER_PRIEST, 100.0f);
++        uint32 kept = 0;
++        for (Creature* add : priests)
++        {
++            if (!add->IsAlive())
++                continue;
++            if (kept++ >= 2)
++                add->ForcedDespawn();
++        }
+     }
+ 
+     void JustDied(Unit* /*killer*/) override
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/molten_core.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/molten_core.cpp
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/molten_core.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/molten_core.cpp
+@@ -242,7 +242,7 @@ void instance_molten_core::SpawnMajordomo(Unit* summoner, bool initialSummon, ui
+             if (initialSummon)
+                 DoScriptText(SAY_MAJORDOMO_SPAWN, pMajordomo);
+ 
+-            uint32 addCount = sCustomRaidScalingMgr.GetMechanicCount(pMajordomo->GetMapId(), MAX_MAJORDOMO_ADDS, 4);
++            uint32 addCount = sCustomRaidScalingMgr.GetMechanicCount(pMajordomo->GetMapId(), MAX_MAJORDOMO_ADDS, 3);
+             for (uint32 i = 0; i < addCount; ++i)
+             {
+                 // Alternate elites and healers so the reduced wave retains the encounter's composition.
+diff --git a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_ragnaros.cpp b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_ragnaros.cpp
+--- a/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_ragnaros.cpp
++++ b/src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/molten_core/boss_ragnaros.cpp
+@@ -174,7 +174,7 @@ struct boss_ragnarosAI : public CombatAI
+     {
+         if (summoned->GetEntry() == NPC_SON_OF_FLAME)
+         {
+-            uint32 maxSons = sCustomRaidScalingMgr.GetMechanicCount(m_creature->GetMapId(), NB_ADDS_IN_SUBMERGE, 3);
++            uint32 maxSons = sCustomRaidScalingMgr.GetMechanicCount(m_creature->GetMapId(), NB_ADDS_IN_SUBMERGE, 2);
+             if (m_uiSummonedSons >= maxSons)
+             {
+                 summoned->ForcedDespawn();
+@@ -243,7 +243,7 @@ struct boss_ragnarosAI : public CombatAI
+                 // Summon 8 elementals around the boss
+                 m_uiSummonedSons = 0;
+                 if (DoCastSpellIfCan(nullptr, SPELL_SUMMON_SONS_FLAME) == CAST_OK)
+-                    m_uiAddCount = sCustomRaidScalingMgr.GetMechanicCount(m_creature->GetMapId(), NB_ADDS_IN_SUBMERGE, 3);
++                    m_uiAddCount = sCustomRaidScalingMgr.GetMechanicCount(m_creature->GetMapId(), NB_ADDS_IN_SUBMERGE, 2);
+ 
+                 ResetCombatAction(RAGNAROS_PHASE_TRANSITION, 3000);
+                 m_phase = PHASE_SUBMERGING;
